@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MyTrack — Expenses</title>
+  <link rel="stylesheet" href="shared.css">
+  <link rel="stylesheet" href="expenses.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
+</head>
+<body>
+<div class="app">
+
+  <nav class="topnav">
+    <a href="index.html" class="topnav__brand">
+      <div class="topnav__logo">🎯</div>
+      <div><div class="topnav__name">MyTrack</div><div class="topnav__tagline">Personal Dashboard</div></div>
+    </a>
+    <div class="topnav__links">
+      <a href="index.html"    class="topnav__link"><span class="topnav__link-icon">🎯</span><span>Habits</span></a>
+      <a href="todos.html"    class="topnav__link"><span class="topnav__link-icon">✅</span><span>Todos</span></a>
+      <a href="expenses.html" class="topnav__link active"><span class="topnav__link-icon">💰</span><span>Expenses</span></a>
+    </div>
+    <button class="btn-primary" id="btnAddExp" style="background:var(--grad-money);box-shadow:0 4px 18px var(--green-dim);">
+      <span style="font-size:1.1rem;font-weight:300">＋</span> Add Expense
+    </button>
+  </nav>
+
+  <!-- SUMMARY CARDS -->
+  <section class="exp-stats" id="expStats">
+    <div class="estat estat--spent">
+      <div class="estat__icon">💸</div>
+      <div><div class="estat__value" id="statSpent">₹0</div><div class="estat__label">This Month</div></div>
+      <div class="estat__glow"></div>
+    </div>
+    <div class="estat estat--today">
+      <div class="estat__icon">📅</div>
+      <div><div class="estat__value" id="statToday">₹0</div><div class="estat__label">Today</div></div>
+      <div class="estat__glow"></div>
+    </div>
+    <div class="estat estat--avg">
+      <div class="estat__icon">📊</div>
+      <div><div class="estat__value" id="statAvg">₹0</div><div class="estat__label">Daily Avg</div></div>
+      <div class="estat__glow"></div>
+    </div>
+    <div class="estat estat--count">
+      <div class="estat__icon">🧾</div>
+      <div><div class="estat__value" id="statCount">0</div><div class="estat__label">Transactions</div></div>
+      <div class="estat__glow"></div>
+    </div>
+  </section>
+
+  <!-- MONTH NAV + MAIN CONTENT -->
+  <div class="exp-layout">
+
+    <!-- LEFT: chart + breakdown -->
+    <div class="exp-left">
+      <div class="exp-card" id="chartCard">
+        <div class="exp-card__header">
+          <div class="month-nav">
+            <button class="month-btn" id="prevMonth">◀</button>
+            <span class="month-label" id="monthLabel">March 2026</span>
+            <button class="month-btn" id="nextMonth">▶</button>
+          </div>
+        </div>
+        <!-- Donut chart -->
+        <div class="donut-wrap">
+          <svg id="donutSvg" viewBox="0 0 200 200" class="donut-svg"></svg>
+          <div class="donut-center">
+            <div class="donut-total" id="donutTotal">₹0</div>
+            <div class="donut-label">Total</div>
+          </div>
+        </div>
+        <!-- Legend -->
+        <div class="chart-legend" id="chartLegend"></div>
+      </div>
+
+      <!-- Line chart - daily -->
+      <div class="exp-card" id="barCard">
+        <div class="exp-card__title">Daily Spending</div>
+        <div class="line-chart-wrap" id="lineChartWrap">
+          <svg id="lineChartSvg" class="line-chart-svg"></svg>
+          <div class="line-chart-labels" id="lineChartLabels"></div>
+          <div class="line-tooltip" id="lineTooltip"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: filter + list -->
+    <div class="exp-right">
+      <div class="exp-filters">
+        <div class="exp-filters-row">
+          <button class="filter-chip active" data-cat="all">All</button>
+          <span id="catFilterBtns" style="display:contents"></span>
+        </div>
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="searchExp" class="search-input" placeholder="Search expenses…">
+        </div>
+      </div>
+
+      <div id="expList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="expModal">
+  <div class="modal">
+    <button class="modal__close" id="modalClose">✕</button>
+    <h2 class="modal__title" id="expModalTitle">Add Expense</h2>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="modal__field" style="grid-column:1/-1">
+        <label class="modal__label">Description</label>
+        <input class="modal__input" type="text" id="expDesc" placeholder="e.g. Lunch at cafe">
+      </div>
+      <div class="modal__field">
+        <label class="modal__label">Amount (₹)</label>
+        <input class="modal__input" type="number" id="expAmount" placeholder="0.00" min="0" step="0.01">
+      </div>
+      <div class="modal__field">
+        <label class="modal__label">Date</label>
+        <input class="modal__input" type="date" id="expDate">
+      </div>
+      <div class="modal__field">
+        <label class="modal__label">Category</label>
+        <select class="modal__select" id="expCat"></select>
+      </div>
+      <div class="modal__field">
+        <label class="modal__label">Payment</label>
+        <select class="modal__select" id="expPayment">
+          <option value="cash">💵 Cash</option>
+          <option value="upi">📱 UPI</option>
+          <option value="card">💳 Card</option>
+          <option value="netbanking">🏦 Net Banking</option>
+        </select>
+      </div>
+      <div class="modal__field" style="grid-column:1/-1">
+        <label class="modal__label">Notes (optional)</label>
+        <input class="modal__input" type="text" id="expNotes" placeholder="Any extra detail…">
+      </div>
+    </div>
+
+    <div class="modal__actions">
+      <button class="modal__btn modal__btn--cancel" id="expCancel">Cancel</button>
+      <button class="modal__btn modal__btn--primary" id="expSave" style="background:var(--grad-money);">Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="expenses.js"></script>
+</body>
+</html>

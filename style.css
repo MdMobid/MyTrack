@@ -1,52 +1,14 @@
+/* Habits-specific styles — base tokens/reset in shared.css */
+
 /* ============================================================
    MYTRACK — Dark Neumorphism
    Base: #1e2235  Light shadow: rgba(255,255,255,0.05)  Dark shadow: rgba(0,0,0,0.5)
    Font: Outfit (display) + Nunito (body)
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Nunito:wght@300;400;500;600;700&display=swap');
+/* fonts loaded via shared.css */
 
-:root {
-  --bg:         #1e2235;
-  --bg-raised:  #252a3f;
-  --bg-deep:    #181c2e;
-  --bg-deeper:  #13172a;
-
-  --sh-light:   rgba(255,255,255,0.055);
-  --sh-dark:    rgba(0,0,0,0.52);
-  --neu-out:    8px 8px 18px var(--sh-dark), -8px -8px 18px var(--sh-light);
-  --neu-out-sm: 4px 4px 10px var(--sh-dark), -4px -4px 10px var(--sh-light);
-  --neu-out-xs: 2px 2px 6px  var(--sh-dark), -2px -2px 6px  var(--sh-light);
-  --neu-in:     inset 5px 5px 12px var(--sh-dark), inset -5px -5px 12px var(--sh-light);
-  --neu-in-sm:  inset 3px 3px 7px  var(--sh-dark), inset -3px -3px 7px  var(--sh-light);
-  --neu-in-xs:  inset 2px 2px 4px  var(--sh-dark), inset -2px -2px 4px  var(--sh-light);
-
-  --cyan:       #00d4ff;
-  --cyan-dim:   rgba(0,212,255,0.18);
-  --cyan-glow:  rgba(0,212,255,0.30);
-  --purple:     #7c3aed;
-  --purple-dim: rgba(124,58,237,0.18);
-  --green:      #34d399;
-  --green-dim:  rgba(52,211,153,0.20);
-  --green-glow: rgba(52,211,153,0.30);
-  --orange:     #fb923c;
-  --pink:       #f472b6;
-  --red:        #f87171;
-  --yellow:     #fbbf24;
-
-  --grad-primary: linear-gradient(135deg,#00d4ff,#7c3aed);
-  --grad-success: linear-gradient(135deg,#34d399,#00d4ff);
-  --grad-fire:    linear-gradient(135deg,#fb923c,#f87171);
-
-  --t1: #e2e8f0;
-  --t2: #94a3b8;
-  --t3: #5a6880;
-  --t4: #3d4a60;
-
-  --r-xs: 8px;  --r-sm: 12px;  --r-md: 18px;  --r-lg: 24px;  --r-xl: 32px;
-  --ease:   cubic-bezier(0.4,0,0.2,1);
-  --spring: cubic-bezier(0.34,1.56,0.64,1);
-}
+/* tokens in shared.css */
 
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
 html{font-size:16px;scroll-behavior:smooth;}
