@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MyTrack — Habit Tracker</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
+</head>
+<body>
+  <div id="app">
+    <header class="header" id="header">
+      <div class="header__brand">
+        <div class="header__logo">🎯</div>
+        <div>
+          <h1 class="header__title">MyTrack</h1>
+          <p class="header__subtitle">Build Habits, Build You</p>
+        </div>
+      </div>
+      <nav class="view-switcher" id="viewSwitcher">
+        <button class="view-switcher__btn active" data-view="daily" id="btn-daily">📅 Daily</button>
+        <button class="view-switcher__btn" data-view="weekly" id="btn-weekly">📊 Weekly</button>
+        <button class="view-switcher__btn" data-view="monthly" id="btn-monthly">🗓️ Monthly</button>
+      </nav>
+      <button class="btn-add-habit" id="btnAddHabit">
+        <span class="btn-add-habit__plus">＋</span> New Habit
+      </button>
+    </header>
+
+    <section class="stats-bar" id="statsBar">
+      <div class="stat-card stat-card--progress">
+        <div class="stat-card__icon">📈</div>
+        <div>
+          <div class="stat-card__value" id="statTodayPct">0%</div>
+          <div class="stat-card__label">Today's Progress</div>
+        </div>
+        <div class="stat-card__glow"></div>
+      </div>
+      <div class="stat-card stat-card--streak">
+        <div class="stat-card__icon">🔥</div>
+        <div>
+          <div class="stat-card__value" id="statStreak">0</div>
+          <div class="stat-card__label">Day Streak</div>
+        </div>
+        <div class="stat-card__glow"></div>
+      </div>
+      <div class="stat-card stat-card--completed">
+        <div class="stat-card__icon">✅</div>
+        <div>
+          <div class="stat-card__value" id="statCompleted">0</div>
+          <div class="stat-card__label">Completed Today</div>
+        </div>
+        <div class="stat-card__glow"></div>
+      </div>
+      <div class="stat-card stat-card--best">
+        <div class="stat-card__icon">🏆</div>
+        <div>
+          <div class="stat-card__value" id="statBestStreak">0</div>
+          <div class="stat-card__label">Best Streak</div>
+        </div>
+        <div class="stat-card__glow"></div>
+      </div>
+    </section>
+
+    <main id="mainContent"></main>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-overlay" id="habitModal">
+    <div class="modal">
+      <button class="modal__close" id="modalClose" onclick="document.getElementById('modalCancel').click()">✕</button>
+      <h2 class="modal__title" id="modalTitle">New Habit</h2>
+      <div class="modal__field">
+        <label class="modal__label" for="habitName">Habit Name</label>
+        <input class="modal__input" type="text" id="habitName" placeholder="e.g. Morning Meditation" maxlength="40">
+      </div>
+      <div class="modal__field">
+        <label class="modal__label">Choose an Icon</label>
+        <div class="emoji-picker" id="emojiPicker"></div>
+      </div>
+      <div class="modal__field">
+        <label class="modal__label">Color</label>
+        <div class="color-picker" id="colorPicker"></div>
+      </div>
+      <div class="modal__field">
+        <label class="modal__label">Active Days</label>
+        <div class="days-selector" id="daysSelector"></div>
+      </div>
+      <div class="modal__actions">
+        <button class="modal__btn modal__btn--secondary" id="modalCancel">Cancel</button>
+        <button class="modal__btn modal__btn--primary" id="modalSave">Save Habit</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="celebration-overlay" id="celebrationOverlay"></div>
+
+  <svg width="0" height="0" style="position:absolute">
+    <defs>
+      <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#00d4ff"/>
+        <stop offset="100%" stop-color="#7c3aed"/>
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <script src="app.js"></script>
+</body>
+</html>
