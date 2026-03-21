@@ -29,9 +29,28 @@
   const escHtml = s => { const d=document.createElement('div'); d.textContent=String(s||''); return d.innerHTML; };
 
   /* ── PERSISTENCE ── */
-  const save = () => localStorage.setItem(STORAGE_KEY, JSON.stringify(state.expenses));
+  const save = () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.expenses));
+    if (window.db) {
+      window.db.upsertDocument('mytrack_data', { _id: 'expenses_state' }, { 
+        expenses: state.expenses 
+      });
+    }
+  };
   function load() {
     try { const r=localStorage.getItem(STORAGE_KEY); if(r) state.expenses=JSON.parse(r); } catch(e){}
+    
+    if (window.db && window.db.isConfigured()) {
+      window.db.fetchDocuments('mytrack_data').then(docs => {
+        if (!docs) return;
+        const remoteInfo = docs.find(d => d._id === 'expenses_state');
+        if (remoteInfo) {
+          state.expenses = remoteInfo.expenses || [];
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state.expenses));
+          render();
+        }
+      });
+    }
   }
 
   /* ── HELPERS ── */

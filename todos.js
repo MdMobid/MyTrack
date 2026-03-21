@@ -28,6 +28,13 @@
   function save() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state.todos));
     localStorage.setItem(CATS_KEY, JSON.stringify(state.categories));
+    
+    if (window.db) {
+      window.db.upsertDocument('mytrack_data', { _id: 'todos_state' }, { 
+        todos: state.todos, 
+        categories: state.categories 
+      });
+    }
   }
   function load() {
     try {
@@ -36,6 +43,21 @@
       if(t) state.todos = JSON.parse(t);
       if(c) state.categories = JSON.parse(c);
     } catch(e) {}
+
+    if (window.db && window.db.isConfigured()) {
+      window.db.fetchDocuments('mytrack_data').then(docs => {
+        if (!docs) return;
+        const remoteInfo = docs.find(d => d._id === 'todos_state');
+        if (remoteInfo) {
+          state.todos = remoteInfo.todos || [];
+          state.categories = remoteInfo.categories || DEFAULT_CATS;
+          
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state.todos));
+          localStorage.setItem(CATS_KEY, JSON.stringify(state.categories));
+          render();
+        }
+      });
+    }
   }
 
   /* ── STATS ── */

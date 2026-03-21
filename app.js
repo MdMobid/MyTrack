@@ -107,6 +107,13 @@
       habits: state.habits,
       completions: state.completions,
     }));
+    // Sync to Mongo
+    if (window.db) {
+      window.db.upsertDocument('mytrack_data', { _id: 'habits_state' }, { 
+        habits: state.habits, 
+        completions: state.completions 
+      });
+    }
   }
 
   function loadState() {
@@ -119,6 +126,24 @@
       }
     } catch (e) {
       console.warn('Failed to load state:', e);
+    }
+    
+    // Attempt remote sync if online
+    if (window.db && window.db.isConfigured()) {
+      window.db.fetchDocuments('mytrack_data').then(docs => {
+        if (!docs) return;
+        const remoteInfo = docs.find(d => d._id === 'habits_state');
+        if (remoteInfo) {
+          state.habits = remoteInfo.habits || [];
+          state.completions = remoteInfo.completions || {};
+          // Save remotely fetched data purely to local so no loop happens
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({
+            habits: state.habits,
+            completions: state.completions,
+          }));
+          renderCurrentView();
+        }
+      });
     }
   }
 
@@ -742,6 +767,34 @@
     $('#habitModal').addEventListener('click', (e) => {
       if (e.target === $('#habitModal')) closeModal();
     });
+
+    // DB Settings Modal
+    const btnSettings = document.getElementById('btnSettings');
+    const settingsModal = document.getElementById('settingsModal');
+    if (btnSettings && settingsModal) {
+      btnSettings.addEventListener('click', () => {
+        if (window.db && window.db.config) {
+          document.getElementById('dbUrl').value = window.db.config.url;
+          document.getElementById('dbKey').value = window.db.config.key || '';
+        }
+        settingsModal.classList.add('open');
+      });
+      document.getElementById('settingsClose').addEventListener('click', () => settingsModal.classList.remove('open'));
+      document.getElementById('btnDisconnectDb').addEventListener('click', () => {
+        window.db.clearConfig();
+        settingsModal.classList.remove('open');
+        alert("Disconnected from Firebase Sync.");
+      });
+      document.getElementById('btnSaveDb').addEventListener('click', () => {
+        const url = document.getElementById('dbUrl').value.trim();
+        const key = document.getElementById('dbKey').value.trim();
+        if (!url) return alert("Please enter the Firebase DB URL");
+        window.db.saveConfig(url, key);
+        settingsModal.classList.remove('open');
+        alert("Firebase Sync Configured! Your data will now auto-sync in the background.");
+        loadState(); // trigger a re-sync
+      });
+    }
   }
 
   function openModal(habit = null) {

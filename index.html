@@ -7,6 +7,9 @@
   <link rel="stylesheet" href="shared.css">
   <link rel="stylesheet" href="style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="apple-touch-icon" href="icon.svg">
 </head>
 <body>
 <div id="app">
@@ -30,6 +33,7 @@
       <button class="btn-add-habit" id="btnAddHabit">
         <span class="btn-add-habit__plus">＋</span> New Habit
       </button>
+      <button class="btn-settings" id="btnSettings" style="background:transparent;border:none;color:var(--t2);cursor:pointer;font-size:1.2rem;margin-left:8px;" title="Sync Settings">⚙️</button>
     </div>
   </nav>
 
@@ -97,6 +101,32 @@
   </defs>
 </svg>
 
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <button class="modal__close" id="settingsClose">✕</button>
+    <h2 class="modal__title">Sync Settings</h2>
+    <p style="color:var(--t2);font-size:0.9rem;margin-bottom:16px;">Connect Firebase Realtime DB to sync across devices.</p>
+    <div class="modal__field">
+      <label class="modal__label">Firebase DB URL</label>
+      <input class="modal__input" type="text" id="dbUrl" placeholder="https://your-project.firebaseio.com">
+    </div>
+    <div class="modal__field">
+      <label class="modal__label">Database Secret / Auth (Optional)</label>
+      <input class="modal__input" type="password" id="dbKey" placeholder="Your DB Auth Token">
+    </div>
+    <div class="modal__actions">
+      <button class="modal__btn modal__btn--cancel" id="btnDisconnectDb" style="color:rgba(248, 113, 113, 0.8);border-color:rgba(248, 113, 113, 0.3);">Disconnect</button>
+      <button class="modal__btn modal__btn--primary" id="btnSaveDb" style="background:var(--grad-primary);">Save & Sync</button>
+    </div>
+  </div>
+</div>
+
+<script src="db.js"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(err => console.error(err));
+  }
+</script>
 <script src="app.js"></script>
 </body>
 </html>
