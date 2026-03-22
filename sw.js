@@ -12,7 +12,8 @@ const ASSETS = [
   './todos.js',
   './expenses.js',
   './db.js',
-  './icon.svg',
+  './icon-192.png',
+  './icon-512.png',
   './manifest.json'
 ];
 
