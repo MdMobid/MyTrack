@@ -1,5 +1,5 @@
 {
-  "name": "MyTrack Dashboard",
+  "name": "MyTrack",
   "short_name": "MyTrack",
   "start_url": "./index.html",
   "display": "standalone",
