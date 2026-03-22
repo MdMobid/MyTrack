@@ -11,6 +11,45 @@
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0f172a">
   <link rel="apple-touch-icon" href="icon-192.png">
+
+  <style>
+    /* ── Emoji field ──────────────────────────────────────── */
+    .emoji-field {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .emoji-field__preview {
+      font-size: 2rem;
+      line-height: 1;
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      background: var(--neu-bg, #1e293b);
+      box-shadow: var(--neu-inset, inset 2px 2px 6px rgba(0, 0, 0, .4), inset -2px -2px 6px rgba(255, 255, 255, .04));
+      flex-shrink: 0;
+      transition: opacity 0.2s;
+      user-select: none;
+    }
+
+    .emoji-field__input {
+      /* Inherits .modal__input styles; we just tweak width */
+      width: 120px !important;
+      font-size: 1.4rem !important;
+      text-align: center;
+      letter-spacing: 2px;
+    }
+
+    .emoji-field__hint {
+      font-size: 0.78rem;
+      color: var(--t3, rgba(255, 255, 255, 0.35));
+      line-height: 1.4;
+    }
+  </style>
 </head>
 
 <body>
@@ -83,26 +122,39 @@
     <main id="mainContent"></main>
   </div>
 
+  <!-- ── Add / Edit Habit Modal ─────────────────────────── -->
   <div class="modal-overlay" id="habitModal">
     <div class="modal">
       <button class="modal__close" id="modalClose" onclick="document.getElementById('modalCancel').click()">✕</button>
       <h2 class="modal__title" id="modalTitle">New Habit</h2>
+
       <div class="modal__field">
         <label class="modal__label" for="habitName">Habit Name</label>
         <input class="modal__input" type="text" id="habitName" placeholder="e.g. Morning Meditation" maxlength="40">
       </div>
+
+      <!-- Emoji: free-type input + live preview -->
       <div class="modal__field">
-        <label class="modal__label">Choose an Icon</label>
-        <div class="emoji-picker" id="emojiPicker"></div>
+        <label class="modal__label">Icon</label>
+        <div class="emoji-field">
+          <div class="emoji-field__preview" id="emojiPreview">💪</div>
+          <input class="modal__input emoji-field__input" type="text" id="emojiInput" placeholder="✏️" maxlength="8"
+            autocomplete="off" spellcheck="false">
+          <span class="emoji-field__hint">Type or paste<br>any emoji</span>
+        </div>
+
       </div>
+
       <div class="modal__field">
         <label class="modal__label">Color</label>
         <div class="color-picker" id="colorPicker"></div>
       </div>
+
       <div class="modal__field">
         <label class="modal__label">Active Days</label>
         <div class="days-selector" id="daysSelector"></div>
       </div>
+
       <div class="modal__actions">
         <button class="modal__btn modal__btn--cancel" id="modalCancel">Cancel</button>
         <button class="modal__btn modal__btn--primary" id="modalSave" style="background:var(--grad-primary);">Save
@@ -122,6 +174,7 @@
     </defs>
   </svg>
 
+  <!-- ── Settings Modal ─────────────────────────────────── -->
   <div class="modal-overlay" id="settingsModal">
     <div class="modal">
       <button class="modal__close" id="settingsClose">✕</button>

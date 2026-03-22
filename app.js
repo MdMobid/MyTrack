@@ -12,8 +12,6 @@
   const DAY_NAMES_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-  const EMOJIS = ['💪', '🧘', '📖', '🏃', '💧', '🍎', '😴', '✍️', '🎵', '🧠', '🌱', '🎨', '💻', '🏋️', '🚶', '📝', '🧹', '🍳', '💊', '🎯'];
-
   const COLORS = [
     { name: 'Cyan', value: '#00d4ff', gradient: 'linear-gradient(135deg, #00d4ff, #0099cc)' },
     { name: 'Purple', value: '#7c3aed', gradient: 'linear-gradient(135deg, #7c3aed, #5b21b6)' },
@@ -101,6 +99,40 @@
     return state.habits.filter(h => isHabitActiveOnDay(h, dayIndex));
   }
 
+  // ── Emoji Helpers ─────────────────────────────────────────
+  /**
+   * Extract the first grapheme cluster (emoji or character) from a string.
+   * Handles multi-codepoint emoji like flags and ZWJ sequences.
+   */
+  function extractFirstEmoji(str) {
+    if (!str) return '';
+    // Use Intl.Segmenter if available (modern browsers)
+    if (typeof Intl !== 'undefined' && Intl.Segmenter) {
+      const seg = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+      const segments = [...seg.segment(str)];
+      return segments.length > 0 ? segments[0].segment : str.charAt(0);
+    }
+    // Fallback: split by Unicode code points and take the first "word"
+    const arr = [...str];
+    return arr[0] || '';
+  }
+
+  function syncEmojiPreview() {
+    const input = $('#emojiInput');
+    const preview = $('#emojiPreview');
+    if (!input || !preview) return;
+    const val = input.value.trim();
+    const first = extractFirstEmoji(val);
+    if (first) {
+      modalState.emoji = first;
+      preview.textContent = first;
+      preview.style.opacity = '1';
+    } else {
+      preview.textContent = '?';
+      preview.style.opacity = '0.35';
+    }
+  }
+
   // ── Persistence ───────────────────────────────────────────
   function saveState() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
@@ -136,7 +168,6 @@
         if (remoteInfo) {
           state.habits = remoteInfo.habits || [];
           state.completions = remoteInfo.completions || {};
-          // Save remotely fetched data purely to local so no loop happens
           localStorage.setItem(STORAGE_KEY, JSON.stringify({
             habits: state.habits,
             completions: state.completions,
@@ -152,7 +183,6 @@
     let streak = 0;
     const d = new Date();
 
-    // Check if today is complete — if not, start from yesterday
     const todayActive = getActiveHabitsForDate(todayStr());
     const todayCompletions = state.completions[todayStr()] || {};
     const todayAllDone = todayActive.length > 0 && todayActive.every(h => todayCompletions[h.id]);
@@ -166,8 +196,6 @@
       const active = getActiveHabitsForDate(ds);
       if (active.length === 0) {
         d.setDate(d.getDate() - 1);
-        // Don't count days with no active habits, but don't break streak
-        // Limit lookback to prevent infinite loop
         if (streak === 0 && d < new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)) break;
         continue;
       }
@@ -179,11 +207,6 @@
       } else {
         break;
       }
-    }
-
-    // Also count today if all done
-    if (todayAllDone) {
-      // Already counted
     }
 
     return streak;
@@ -221,7 +244,6 @@
     if (!habit) return 0;
 
     const d = new Date();
-    // Start from today or yesterday
     const todayComp = state.completions[todayStr()] || {};
     if (!todayComp[habitId]) {
       d.setDate(d.getDate() - 1);
@@ -385,7 +407,6 @@
     const today = todayStr();
     const habits = state.habits;
 
-    // Weekly bar chart data
     const barData = weekDates.map(wd => {
       const active = getActiveHabitsForDate(wd);
       const comps = state.completions[wd] || {};
@@ -473,7 +494,6 @@
     `;
     container.innerHTML = html;
 
-    // Animate bars in after render
     requestAnimationFrame(() => {
       $$('.weekly-chart__bar-fill').forEach(bar => {
         const h = bar.style.height;
@@ -492,11 +512,9 @@
     const { year, month } = state.monthlyViewDate;
     const today = todayStr();
 
-    // Calendar grid
     const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-    // Compute per-day completion levels
     const dayData = [];
     for (let d = 1; d <= daysInMonth; d++) {
       const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
@@ -504,7 +522,7 @@
       const comps = state.completions[ds] || {};
       const done = active.filter(h => comps[h.id]).length;
       const total = active.length;
-      const pct = total > 0 ? Math.round((done / total) * 100) : -1; // -1 = no habits that day
+      const pct = total > 0 ? Math.round((done / total) * 100) : -1;
       let level = 0;
       if (pct >= 0) {
         if (pct === 0) level = 0;
@@ -516,7 +534,6 @@
       dayData.push({ day: d, ds, pct, level, done, total, isToday: ds === today });
     }
 
-    // Per-habit monthly stats
     const habitStats = state.habits.map(habit => {
       let totalActive = 0;
       let totalDone = 0;
@@ -534,7 +551,6 @@
       return { habit, totalActive, totalDone, pct, color };
     });
 
-    // Overall monthly score
     let totalOverall = 0, doneOverall = 0;
     habitStats.forEach(hs => { totalOverall += hs.totalActive; doneOverall += hs.totalDone; });
     const overallPct = totalOverall > 0 ? Math.round((doneOverall / totalOverall) * 100) : 0;
@@ -629,7 +645,6 @@
     `;
     container.innerHTML = html;
 
-    // Animate bars
     requestAnimationFrame(() => {
       $$('.habit-analytics-card__bar-fill').forEach(bar => {
         const w = bar.style.width;
@@ -646,13 +661,11 @@
     state.completions[today][habitId] = checked;
     saveState();
 
-    // Check for 100% completion celebration
     const activeToday = getActiveHabitsForDate(today);
     const todayComps = state.completions[today];
     const allDone = activeToday.every(h => todayComps[h.id]);
 
     if (checked) {
-      // Ripple effect on the card
       const card = document.getElementById(`habit-card-${habitId}`);
       if (card) {
         card.classList.add('completed');
@@ -666,7 +679,6 @@
       }
     }
 
-    // Delayed re-render to let animation play
     setTimeout(() => {
       renderCurrentView();
       if (allDone && checked && activeToday.length > 1) {
@@ -713,20 +725,23 @@
   let modalState = { emoji: '💪', color: '#00d4ff', days: [0, 1, 2, 3, 4, 5, 6] };
 
   function initModal() {
-    // Emoji picker
-    const emojiPicker = $('#emojiPicker');
-    emojiPicker.innerHTML = EMOJIS.map(e =>
-      `<button class="emoji-picker__btn" data-emoji="${e}">${e}</button>`
-    ).join('');
+    // ── Emoji input (free-form) ────────────────────────────
+    const emojiInput = $('#emojiInput');
+    const emojiPreview = $('#emojiPreview');
 
-    emojiPicker.addEventListener('click', (e) => {
-      const btn = e.target.closest('.emoji-picker__btn');
-      if (!btn) return;
-      modalState.emoji = btn.dataset.emoji;
-      $$('.emoji-picker__btn').forEach(b => b.classList.toggle('selected', b === btn));
+    emojiInput.addEventListener('input', () => {
+      syncEmojiPreview();
     });
 
-    // Color picker
+    // Prevent typing more than one grapheme cluster visually
+    emojiInput.addEventListener('keydown', (e) => {
+      // Allow control keys always
+      const controlKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'];
+      if (controlKeys.includes(e.key)) return;
+      // After the first grapheme is captured we clear on next real key
+    });
+
+    // ── Color picker ───────────────────────────────────────
     const colorPicker = $('#colorPicker');
     colorPicker.innerHTML = COLORS.map(c =>
       `<button class="color-picker__btn" data-color="${c.value}" style="background:${c.gradient};color:${c.value}" title="${c.name}"></button>`
@@ -739,7 +754,7 @@
       $$('.color-picker__btn').forEach(b => b.classList.toggle('selected', b === btn));
     });
 
-    // Days selector
+    // ── Days selector ──────────────────────────────────────
     const daysSelector = $('#daysSelector');
     daysSelector.innerHTML = DAY_NAMES.map((d, i) =>
       `<button class="days-selector__btn" data-day="${i}">${d}</button>`
@@ -761,14 +776,14 @@
       });
     });
 
-    // Save
+    // ── Save / Cancel ──────────────────────────────────────
     $('#modalSave').addEventListener('click', saveHabit);
     $('#modalCancel').addEventListener('click', closeModal);
     $('#habitModal').addEventListener('click', (e) => {
       if (e.target === $('#habitModal')) closeModal();
     });
 
-    // DB Settings Modal
+    // ── Settings modal ─────────────────────────────────────
     const btnSettings = document.getElementById('btnSettings');
     const settingsModal = document.getElementById('settingsModal');
     if (btnSettings && settingsModal) {
@@ -795,7 +810,6 @@
 
         if (!url) return alert("Please enter the Firebase DB URL to enable Sync.");
 
-        // Save to DB wrapper config (we'll adapt db.js slightly so it accepts all this)
         const newConfig = { url, key, fcmConfig: fcmCfg, vapidKey: vapid };
         localStorage.setItem('mytrack_db_config', JSON.stringify(newConfig));
         window.db.config = newConfig;
@@ -804,14 +818,13 @@
         alert("Sync & Push Settings Configured!");
         loadState();
 
-        // Trigger Push Registration if settings were provided
         if (fcmCfg && vapid) {
           registerForPushNotifications(fcmCfg, vapid);
         }
       });
     }
 
-    // Try auto-registration on boot if config exists
+    // Auto-registration on boot
     try {
       if (window.db && window.db.config && window.db.config.fcmConfig && window.db.config.vapidKey) {
         setTimeout(() => {
@@ -828,11 +841,9 @@
 
       let config;
       try {
-        // Strip out 'const firebaseConfig = ' to just parse the raw object
         const jsonStr = configStr.substring(configStr.indexOf('{'), configStr.lastIndexOf('}') + 1);
         config = (new Function("return " + jsonStr))();
       } catch (err) {
-        // Fallback to strict JSON parsing
         config = JSON.parse(configStr);
       }
 
@@ -849,12 +860,7 @@
         });
 
         if (token && window.db) {
-          // Save the device token silently up to the Cloud!
-          // Replace illegal Firebase key characters in token if necessary, but DB URL allows pushing token objects.
-          // Wait, better yet, upload an object payload where token is the key or inside it.
-          // Realtime DB doesn't allow slashes or dots or $ # [ ] in document keys.
           const cleanKey = token.substring(0, 30).replace(/[^a-zA-Z0-9]/g, '');
-          // Use PUT via upsertDocument to save it to /tokens
           window.db.upsertDocument('tokens', { _id: cleanKey }, { token: token, lastActive: Date.now(), platform: navigator.userAgent });
           console.log("FCM Token dynamically registered and saved to Firebase via Queue!");
         }
@@ -866,6 +872,8 @@
 
   function openModal(habit = null) {
     const modal = $('#habitModal');
+    const emojiInput = $('#emojiInput');
+    const emojiPreview = $('#emojiPreview');
 
     if (habit) {
       $('#modalTitle').textContent = 'Edit Habit';
@@ -882,8 +890,11 @@
       editingHabitId = null;
     }
 
-    // Sync UI
-    $$('.emoji-picker__btn').forEach(b => b.classList.toggle('selected', b.dataset.emoji === modalState.emoji));
+    // Sync emoji UI
+    emojiInput.value = modalState.emoji;
+    emojiPreview.textContent = modalState.emoji;
+    emojiPreview.style.opacity = '1';
+    // Sync color & days UI
     $$('.color-picker__btn').forEach(b => b.classList.toggle('selected', b.dataset.color === modalState.color));
     $$('.days-selector__btn').forEach(b => b.classList.toggle('selected', modalState.days.includes(parseInt(b.dataset.day))));
 
@@ -903,6 +914,11 @@
       setTimeout(() => { $('#habitName').style.boxShadow = ''; }, 1500);
       return;
     }
+
+    // Validate emoji — fall back to default if input is empty
+    const rawEmoji = $('#emojiInput').value.trim();
+    const finalEmoji = extractFirstEmoji(rawEmoji) || '🎯';
+    modalState.emoji = finalEmoji;
 
     if (editingHabitId) {
       const habit = state.habits.find(h => h.id === editingHabitId);
@@ -971,25 +987,20 @@
     loadState();
     initModal();
 
-    // View switcher
     $('#viewSwitcher').addEventListener('click', (e) => {
       const btn = e.target.closest('.view-switcher__btn');
       if (btn) switchView(btn.dataset.view);
     });
 
-    // Add habit button
     $('#btnAddHabit').addEventListener('click', () => openModal());
 
-    // Enter key to save habit in modal
     $('#habitName').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') saveHabit();
     });
 
-    // Initial render
     renderCurrentView();
   }
 
-  // Start
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
