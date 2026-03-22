@@ -111,17 +111,19 @@
       <div class="exp-right">
         <div class="exp-filters">
           <div style="display: flex; gap: 10px; align-items: center; width: 100%; flex-wrap: wrap;">
-            <div class="search-wrap" style="flex: 1; min-width: 140px; margin: 0;">
+            <div class="search-wrap" style="flex: 1; min-width: 180px; margin: 0;">
               <span class="search-icon">🔍</span>
               <input type="text" id="searchExp" class="search-input" placeholder="Search expenses…">
             </div>
 
-            <select id="filterCatSelect" class="cat-filter-select" title="Filter by Category">
-              <option value="all">All Categories</option>
-            </select>
+            <div style="display: flex; gap: 10px; flex: 1; min-width: 180px; justify-content: flex-end;">
+              <select id="filterCatSelect" class="cat-filter-select" title="Filter by Category" style="flex: 1;">
+                <option value="all">All Categories</option>
+              </select>
 
-            <button class="filter-chip" id="btnManageCats" title="Manage Categories"
-              style="background:transparent;border:1px dashed var(--t3);color:var(--t2);width:42px;height:42px;padding:0;display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin:0;border-radius:50%;line-height:1;flex-shrink:0;">⚙️</button>
+              <button class="filter-chip" id="btnManageCats" title="Manage Categories"
+                style="background:transparent;border:1px dashed var(--t3);color:var(--t2);width:42px;height:42px;padding:0;display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin:0;border-radius:50%;line-height:1;flex-shrink:0;">⚙️</button>
+            </div>
           </div>
 
           <div class="pay-segment" id="payFilterBtns">
@@ -129,7 +131,8 @@
             <button class="pay-seg-btn" data-pay="upi" title="UPI">📱 UPI</button>
             <button class="pay-seg-btn" data-pay="card" title="Card">💳 Card</button>
             <button class="pay-seg-btn" data-pay="cash" title="Cash">💵 Cash</button>
-            <button class="pay-seg-btn" data-pay="netbanking" title="NetBanking" style="border-right: none;">🏦 Bank</button>
+            <button class="pay-seg-btn" data-pay="netbanking" title="NetBanking" style="border-right: none;">🏦
+              Bank</button>
           </div>
         </div>
 

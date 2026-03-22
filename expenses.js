@@ -155,8 +155,8 @@
     if (!svgEl) return;
 
     const W = svgEl.clientWidth || 240;
-    const H = 90;
-    const padX = 4, padY = 10;
+    const H = 100;
+    const padX = 4, padY = 24;
     const chartW = W - padX * 2;
     const chartH = H - padY * 2;
     const step = chartW / Math.max(daysInMonth - 1, 1);
@@ -198,38 +198,82 @@
     }).join('')}
       <path d="${areaPath}" fill="url(#${gradId})"/>
       <path d="${linePath}" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      ${todayPt ? `<line x1="${todayPt.x.toFixed(1)}" y1="${padY}" x2="${todayPt.x.toFixed(1)}" y2="${H}" stroke="var(--cyan)" stroke-width="1" stroke-dasharray="3,3" opacity="0.5"/>` : ''}
-      ${pts.filter(p => p.d.total > 0 || p.d.date === today).map(p => {
+      ${todayPt ? `<line x1="${todayPt.x.toFixed(1)}" y1="${padY}" x2="${todayPt.x.toFixed(1)}" y2="${H}" stroke="var(--cyan)" stroke-width="1" stroke-dasharray="3,3" opacity="0.2"/>` : ''}
+      
+      <!-- Interactive Scrubbing Overlay -->
+      <line id="scrubLine" y1="0" y2="${H}" stroke="var(--cyan)" stroke-width="1.5" stroke-dasharray="4,4" opacity="0" pointer-events="none" style="transition: opacity 0.2s;"/>
+      <circle id="scrubDot" r="4.5" fill="var(--bg-deep)" stroke="var(--cyan)" stroke-width="2.5" opacity="0" pointer-events="none" style="transition: opacity 0.2s; filter: drop-shadow(0 0 6px var(--cyan));"/>
+      <rect id="scrubOverlay" x="0" y="0" width="${W}" height="${H}" fill="transparent" style="cursor:crosshair;"/>
+      
+      <!-- Axis Labels perfectly aligned to data points -->
+      ${pts.map(p => {
       const isT = p.d.date === today;
-      return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${isT ? 4.5 : 3}"
-          fill="${isT ? 'var(--cyan)' : '#34d399'}" stroke="var(--bg)" stroke-width="1.5"
-          class="line-dot" data-idx="${p.d.day - 1}" style="cursor:pointer;"/>`;
+      const show = p.d.day === 1 || p.d.day === dailyTotals.length || isT;
+      if (!show) return '';
+      let anchor = 'middle';
+      if (p.d.day === 1) anchor = 'start';
+      else if (p.d.day === dailyTotals.length) anchor = 'end';
+      const color = isT ? 'var(--cyan)' : 'var(--t4)';
+      return `<text x="${p.x.toFixed(1)}" y="${H + 18}" text-anchor="${anchor}" fill="${color}" font-size="10" font-weight="700" font-family="'Outfit', sans-serif" style="pointer-events:none;">${p.d.day}</text>`;
     }).join('')}
     `;
 
-    labelsEl.innerHTML = dailyTotals.map(d => {
-      const isT = d.date === today;
-      const show = d.day === 1 || d.day % 5 === 0 || isT;
-      return `<span class="line-chart-label${isT ? ' today-lbl' : ''}" style="${show ? '' : 'visibility:hidden'}">${d.day}</span>`;
-    }).join('');
+    labelsEl.innerHTML = '';
 
-    svgEl.querySelectorAll('.line-dot').forEach(dot => {
-      dot.addEventListener('mouseenter', () => {
-        const idx = parseInt(dot.dataset.idx);
-        const d = dailyTotals[idx];
-        const wrap = document.getElementById('lineChartWrap');
-        const wRect = wrap.getBoundingClientRect();
-        const sRect = svgEl.getBoundingClientRect();
-        const cx = parseFloat(dot.getAttribute('cx'));
-        const cy = parseFloat(dot.getAttribute('cy'));
-        const scaleX = sRect.width / W;
-        tooltip.textContent = `${d.day} — ${fmtAmt(d.total)}`;
-        tooltip.style.left = (sRect.left - wRect.left + cx * scaleX) + 'px';
-        tooltip.style.top = (sRect.top - wRect.top + cy * scaleX - 10) + 'px';
-        tooltip.classList.add('visible');
+    // Binance-style Scrubbing Logic
+    const overlay = svgEl.querySelector('#scrubOverlay');
+    const scrubLine = svgEl.querySelector('#scrubLine');
+    const scrubDot = svgEl.querySelector('#scrubDot');
+
+    function updateScrub(e) {
+      const rect = svgEl.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const x = clientX - rect.left;
+
+      const scaleX = W / rect.width;
+      const svgX = x * scaleX;
+
+      let closest = pts[0];
+      let minD = Infinity;
+      pts.forEach(p => {
+        const d = Math.abs(p.x - svgX);
+        if (d < minD) { minD = d; closest = p; }
       });
-      dot.addEventListener('mouseleave', () => tooltip.classList.remove('visible'));
-    });
+
+      scrubLine.setAttribute('x1', closest.x.toFixed(1));
+      scrubLine.setAttribute('x2', closest.x.toFixed(1));
+      scrubLine.setAttribute('opacity', '0.6');
+
+      scrubDot.setAttribute('cx', closest.x.toFixed(1));
+      scrubDot.setAttribute('cy', closest.y.toFixed(1));
+      scrubDot.setAttribute('opacity', '1');
+
+      const wrap = document.getElementById('lineChartWrap');
+      const wRect = wrap.getBoundingClientRect();
+
+      tooltip.innerHTML = `<div style="font-size:0.65rem;color:var(--t3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px;">${fmtDate(closest.d.date)}</div><div style="font-size:1.1rem;color:var(--cyan);">${fmtAmt(closest.d.total)}</div>`;
+      tooltip.style.left = (rect.left - wRect.left + (closest.x / scaleX)) + 'px';
+      tooltip.style.top = (rect.top - wRect.top + (closest.y / scaleX) - 15) + 'px';
+
+      // Prevent clipping on the far left and far right edges of the chart
+      let shiftX = '-50%';
+      if (closest.x < 50) shiftX = '0%';
+      else if (closest.x > W - 50) shiftX = '-100%';
+      tooltip.style.transform = `translate(${shiftX}, -100%)`;
+
+      tooltip.classList.add('visible');
+    }
+
+    function hideScrub() {
+      scrubLine.setAttribute('opacity', '0');
+      scrubDot.setAttribute('opacity', '0');
+      tooltip.classList.remove('visible');
+    }
+
+    overlay.addEventListener('mousemove', updateScrub);
+    overlay.addEventListener('touchmove', e => { e.preventDefault(); updateScrub(e); }, { passive: false });
+    overlay.addEventListener('mouseleave', hideScrub);
+    overlay.addEventListener('touchend', hideScrub);
   }
 
   /* ── EXPENSE LIST ── */
