@@ -61,7 +61,7 @@ async function run() {
       tokens: tokens, // Send to all tokens at once (multicast)
     };
 
-    const response = await admin.messaging().sendMulticast(message);
+    const response = await admin.messaging().sendEachForMulticast(message);
     console.log(`Push Results: ${response.successCount} sent successfully | ${response.failureCount} failed.`);
     
     // Optional: We could parse response.responses to remove dead tokens from DB
