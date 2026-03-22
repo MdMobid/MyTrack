@@ -7,10 +7,10 @@
     {name:'Food',       icon:'🍔', color:'#fb923c'},
     {name:'Transport',  icon:'🚗', color:'#00d4ff'},
     {name:'Shopping',   icon:'🛍️', color:'#f472b6'},
-    {name:'Health',     icon:'💊', color:'#34d399'},
-    {name:'Bills',      icon:'📄', color:'#7c3aed'},
+    {name:'Medicines',  icon:'💊', color:'#34d399'},
+    {name:'GYM',        icon:'🏋️‍♂️', color:'#34d399'},
     {name:'Education',  icon:'📚', color:'#fbbf24'},
-    {name:'Entertainment',icon:'🎮',color:'#e879f9'},
+    {name:'Tech',       icon:'🎮', color:'#e879f9'},
     {name:'Other',      icon:'📦', color:'#94a3b8'},
   ];
 
