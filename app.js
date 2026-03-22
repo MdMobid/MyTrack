@@ -109,9 +109,9 @@
     }));
     // Sync to Mongo
     if (window.db) {
-      window.db.upsertDocument('mytrack_data', { _id: 'habits_state' }, { 
-        habits: state.habits, 
-        completions: state.completions 
+      window.db.upsertDocument('mytrack_data', { _id: 'habits_state' }, {
+        habits: state.habits,
+        completions: state.completions
       });
     }
   }
@@ -127,7 +127,7 @@
     } catch (e) {
       console.warn('Failed to load state:', e);
     }
-    
+
     // Attempt remote sync if online
     if (window.db && window.db.isConfigured()) {
       window.db.fetchDocuments('mytrack_data').then(docs => {
@@ -312,8 +312,8 @@
                 <div class="habit-card__name">${escapeHtml(habit.name)}</div>
                 <div class="habit-card__streak ${streak >= 3 ? 'on-fire' : ''}">
                   ${!isActiveToday
-                    ? `<span class="habit-card__rest-tag">Rest day today</span>`
-                    : streak > 0 ? `🔥 ${streak} day streak` : 'No streak yet'}
+          ? `<span class="habit-card__rest-tag">Rest day today</span>`
+          : streak > 0 ? `🔥 ${streak} day streak` : 'No streak yet'}
                 </div>
               </div>
             </div>
@@ -334,12 +334,12 @@
           <div class="habit-card__bottom">
             <div class="habit-card__days">
               ${weekDates.map(wd => {
-                const dayIdx = getDayOfWeek(wd);
-                const isActive = isHabitActiveOnDay(habit, dayIdx);
-                const isToday = wd === today;
-                const isCompletedDay = isActive && (state.completions[wd] || {})[habit.id];
-                return `<div class="habit-card__day ${isActive ? 'active' : ''} ${isToday ? 'today' : ''} ${isCompletedDay ? 'completed-day' : ''}">${DAY_NAMES[dayIdx].charAt(0)}</div>`;
-              }).join('')}
+            const dayIdx = getDayOfWeek(wd);
+            const isActive = isHabitActiveOnDay(habit, dayIdx);
+            const isToday = wd === today;
+            const isCompletedDay = isActive && (state.completions[wd] || {})[habit.id];
+            return `<div class="habit-card__day ${isActive ? 'active' : ''} ${isToday ? 'today' : ''} ${isCompletedDay ? 'completed-day' : ''}">${DAY_NAMES[dayIdx].charAt(0)}</div>`;
+          }).join('')}
             </div>
             <div class="habit-card__actions">
               <button class="habit-card__action-btn" onclick="window.__editHabit('${habit.id}')" title="Edit">✏️</button>
@@ -792,18 +792,18 @@
         const key = document.getElementById('dbKey').value.trim();
         const fcmCfg = document.getElementById('fcmConfig').value.trim();
         const vapid = document.getElementById('vapidKey').value.trim();
-        
+
         if (!url) return alert("Please enter the Firebase DB URL to enable Sync.");
-        
+
         // Save to DB wrapper config (we'll adapt db.js slightly so it accepts all this)
         const newConfig = { url, key, fcmConfig: fcmCfg, vapidKey: vapid };
         localStorage.setItem('mytrack_db_config', JSON.stringify(newConfig));
         window.db.config = newConfig;
-        
+
         settingsModal.classList.remove('open');
         alert("Sync & Push Settings Configured!");
         loadState();
-        
+
         // Trigger Push Registration if settings were provided
         if (fcmCfg && vapid) {
           registerForPushNotifications(fcmCfg, vapid);
@@ -818,39 +818,48 @@
           registerForPushNotifications(window.db.config.fcmConfig, window.db.config.vapidKey);
         }, 3000);
       }
-    } catch(e) { }
+    } catch (e) { }
   }
 
   // ── Push Notification Sub ────────────────────────────────────
   async function registerForPushNotifications(configStr, vapidKey) {
     try {
       if (Notification.permission === 'denied') return;
-      
-      const config = JSON.parse(configStr);
+
+      let config;
+      try {
+        // Strip out 'const firebaseConfig = ' to just parse the raw object
+        const jsonStr = configStr.substring(configStr.indexOf('{'), configStr.lastIndexOf('}') + 1);
+        config = (new Function("return " + jsonStr))();
+      } catch (err) {
+        // Fallback to strict JSON parsing
+        config = JSON.parse(configStr);
+      }
+
       if (!firebase.apps.length) {
         firebase.initializeApp(config);
       }
       const messaging = firebase.messaging();
-      
+
       const permission = await Notification.requestPermission();
       if (permission === 'granted' && window.swReg) {
         const token = await messaging.getToken({
           vapidKey: vapidKey,
           serviceWorkerRegistration: window.swReg
         });
-        
+
         if (token && window.db) {
           // Save the device token silently up to the Cloud!
           // Replace illegal Firebase key characters in token if necessary, but DB URL allows pushing token objects.
           // Wait, better yet, upload an object payload where token is the key or inside it.
           // Realtime DB doesn't allow slashes or dots or $ # [ ] in document keys.
-          const cleanKey = token.substring(0, 30).replace(/[^a-zA-Z0-9]/g, ''); 
+          const cleanKey = token.substring(0, 30).replace(/[^a-zA-Z0-9]/g, '');
           // Use PUT via upsertDocument to save it to /tokens
           window.db.upsertDocument('tokens', { _id: cleanKey }, { token: token, lastActive: Date.now(), platform: navigator.userAgent });
           console.log("FCM Token dynamically registered and saved to Firebase via Queue!");
         }
       }
-    } catch(e) {
+    } catch (e) {
       console.warn("FCM Registration failed:", e);
     }
   }
