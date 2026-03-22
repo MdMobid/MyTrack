@@ -4,17 +4,17 @@
   const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
   const CATEGORIES = [
-    {name:'Food & Drinks',         icon:'🍽️', color:'#3266ad'},
-    {name:'Transport',             icon:'🚗', color:'#C85A30'},
-    {name:'Shopping',              icon:'🛍️', color:'#533FB7'},
-    {name:'Academic',              icon:'📚', color:'#0F6E56'},
-    {name:'Tech & Recharge',       icon:'💻', color:'#185FA5'},
-    {name:'Fitness',               icon:'💪', color:'#D4537E'},
-    {name:'Grooming & Toiletries', icon:'🧴', color:'#888780'},
-    {name:'Gifts',                 icon:'🎁', color:'#E24B4A'},
-    {name:'Health',                icon:'💉', color:'#1D9E75'},
-    {name:'Sports',                icon:'🎾', color:'#97C459'},
-    {name:'Other',                 icon:'📦', color:'#B4B2A9'},
+    {name:'Food & Drinks',         icon:'🍽️', color:'#f97316'},
+    {name:'Transport',             icon:'🚗', color:'#ef4444'},
+    {name:'Shopping',              icon:'🛍️', color:'#a855f7'},
+    {name:'Academic',              icon:'📚', color:'#6366f1'},
+    {name:'Tech & Recharge',       icon:'📱', color:'#3b82f6'},
+    {name:'Fitness',               icon:'💪', color:'#22c55e'},
+    {name:'Grooming & Toiletries', icon:'🧴', color:'#ec4899'},
+    {name:'Gifts & Social',        icon:'🎁', color:'#f59e0b'},
+    {name:'Health',                icon:'💉', color:'#14b8a6'},
+    {name:'Sports',                icon:'🎾', color:'#84cc16'},
+    {name:'Other',                 icon:'📦', color:'#94a3b8'},
   ];
 
   let state = { expenses: [] };
