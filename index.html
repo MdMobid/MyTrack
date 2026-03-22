@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,122 +12,166 @@
   <meta name="theme-color" content="#0f172a">
   <link rel="apple-touch-icon" href="icon-192.png">
 </head>
+
 <body>
-<div id="app">
+  <div id="app">
 
-  <nav class="topnav">
-    <a href="index.html" class="topnav__brand">
-      <div class="topnav__logo">🎯</div>
-      <div><div class="topnav__name">MyTrack</div><div class="topnav__tagline">Personal Dashboard</div></div>
-    </a>
-    <div class="topnav__links">
-      <a href="index.html"    class="topnav__link active"><span class="topnav__link-icon">🎯</span><span>Habits</span></a>
-      <a href="todos.html"    class="topnav__link"><span class="topnav__link-icon">✅</span><span>Todos</span></a>
-      <a href="expenses.html" class="topnav__link"><span class="topnav__link-icon">💰</span><span>Expenses</span></a>
-    </div>
-    <div style="display:flex;align-items:center;gap:8px;">
-      <nav class="view-switcher" id="viewSwitcher">
-        <button class="view-switcher__btn active" data-view="daily"   id="btn-daily">📅 Daily</button>
-        <button class="view-switcher__btn"         data-view="weekly"  id="btn-weekly">📊 Weekly</button>
-        <button class="view-switcher__btn"         data-view="monthly" id="btn-monthly">🗓️ Monthly</button>
-      </nav>
-      <button class="btn-add-habit" id="btnAddHabit">
-        <span class="btn-add-habit__plus">＋</span> New Habit
-      </button>
-      <button class="btn-settings" id="btnSettings" style="background:transparent;border:none;color:var(--t2);cursor:pointer;font-size:1.2rem;margin-left:8px;" title="Sync Settings">⚙️</button>
-    </div>
-  </nav>
+    <nav class="topnav">
+      <a href="index.html" class="topnav__brand">
+        <div class="topnav__logo">🎯</div>
+        <div>
+          <div class="topnav__name">MyTrack</div>
+          <div class="topnav__tagline">Personal Dashboard</div>
+        </div>
+      </a>
+      <div class="topnav__links">
+        <a href="index.html" class="topnav__link active"><span
+            class="topnav__link-icon">🎯</span><span>Habits</span></a>
+        <a href="todos.html" class="topnav__link"><span class="topnav__link-icon">✅</span><span>Todos</span></a>
+        <a href="expenses.html" class="topnav__link"><span class="topnav__link-icon">💰</span><span>Expenses</span></a>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <nav class="view-switcher" id="viewSwitcher">
+          <button class="view-switcher__btn active" data-view="daily" id="btn-daily">📅 Daily</button>
+          <button class="view-switcher__btn" data-view="weekly" id="btn-weekly">📊 Weekly</button>
+          <button class="view-switcher__btn" data-view="monthly" id="btn-monthly">🗓️ Monthly</button>
+        </nav>
+        <button class="btn-add-habit" id="btnAddHabit">
+          <span class="btn-add-habit__plus">＋</span> New Habit
+        </button>
+        <button class="btn-settings" id="btnSettings"
+          style="background:transparent;border:none;color:var(--t2);cursor:pointer;font-size:1.2rem;margin-left:8px;"
+          title="Sync Settings">⚙️</button>
+      </div>
+    </nav>
 
-  <section class="stats-bar" id="statsBar">
-    <div class="stat-card stat-card--progress">
-      <div class="stat-card__icon">📈</div>
-      <div><div class="stat-card__value" id="statTodayPct">0%</div><div class="stat-card__label">Today's Progress</div></div>
-      <div class="stat-card__glow"></div>
-    </div>
-    <div class="stat-card stat-card--streak">
-      <div class="stat-card__icon">🔥</div>
-      <div><div class="stat-card__value" id="statStreak">0</div><div class="stat-card__label">Day Streak</div></div>
-      <div class="stat-card__glow"></div>
-    </div>
-    <div class="stat-card stat-card--completed">
-      <div class="stat-card__icon">✅</div>
-      <div><div class="stat-card__value" id="statCompleted">0</div><div class="stat-card__label">Completed Today</div></div>
-      <div class="stat-card__glow"></div>
-    </div>
-    <div class="stat-card stat-card--best">
-      <div class="stat-card__icon">🏆</div>
-      <div><div class="stat-card__value" id="statBestStreak">0</div><div class="stat-card__label">Best Streak</div></div>
-      <div class="stat-card__glow"></div>
-    </div>
-  </section>
+    <section class="stats-bar" id="statsBar">
+      <div class="stat-card stat-card--progress">
+        <div class="stat-card__icon">📈</div>
+        <div>
+          <div class="stat-card__value" id="statTodayPct">0%</div>
+          <div class="stat-card__label">Today's Progress</div>
+        </div>
+        <div class="stat-card__glow"></div>
+      </div>
+      <div class="stat-card stat-card--streak">
+        <div class="stat-card__icon">🔥</div>
+        <div>
+          <div class="stat-card__value" id="statStreak">0</div>
+          <div class="stat-card__label">Day Streak</div>
+        </div>
+        <div class="stat-card__glow"></div>
+      </div>
+      <div class="stat-card stat-card--completed">
+        <div class="stat-card__icon">✅</div>
+        <div>
+          <div class="stat-card__value" id="statCompleted">0</div>
+          <div class="stat-card__label">Completed Today</div>
+        </div>
+        <div class="stat-card__glow"></div>
+      </div>
+      <div class="stat-card stat-card--best">
+        <div class="stat-card__icon">🏆</div>
+        <div>
+          <div class="stat-card__value" id="statBestStreak">0</div>
+          <div class="stat-card__label">Best Streak</div>
+        </div>
+        <div class="stat-card__glow"></div>
+      </div>
+    </section>
 
-  <main id="mainContent"></main>
-</div>
+    <main id="mainContent"></main>
+  </div>
 
-<div class="modal-overlay" id="habitModal">
-  <div class="modal">
-    <button class="modal__close" id="modalClose" onclick="document.getElementById('modalCancel').click()">✕</button>
-    <h2 class="modal__title" id="modalTitle">New Habit</h2>
-    <div class="modal__field">
-      <label class="modal__label" for="habitName">Habit Name</label>
-      <input class="modal__input" type="text" id="habitName" placeholder="e.g. Morning Meditation" maxlength="40">
-    </div>
-    <div class="modal__field">
-      <label class="modal__label">Choose an Icon</label>
-      <div class="emoji-picker" id="emojiPicker"></div>
-    </div>
-    <div class="modal__field">
-      <label class="modal__label">Color</label>
-      <div class="color-picker" id="colorPicker"></div>
-    </div>
-    <div class="modal__field">
-      <label class="modal__label">Active Days</label>
-      <div class="days-selector" id="daysSelector"></div>
-    </div>
-    <div class="modal__actions">
-      <button class="modal__btn modal__btn--cancel" id="modalCancel">Cancel</button>
-      <button class="modal__btn modal__btn--primary" id="modalSave" style="background:var(--grad-primary);">Save Habit</button>
+  <div class="modal-overlay" id="habitModal">
+    <div class="modal">
+      <button class="modal__close" id="modalClose" onclick="document.getElementById('modalCancel').click()">✕</button>
+      <h2 class="modal__title" id="modalTitle">New Habit</h2>
+      <div class="modal__field">
+        <label class="modal__label" for="habitName">Habit Name</label>
+        <input class="modal__input" type="text" id="habitName" placeholder="e.g. Morning Meditation" maxlength="40">
+      </div>
+      <div class="modal__field">
+        <label class="modal__label">Choose an Icon</label>
+        <div class="emoji-picker" id="emojiPicker"></div>
+      </div>
+      <div class="modal__field">
+        <label class="modal__label">Color</label>
+        <div class="color-picker" id="colorPicker"></div>
+      </div>
+      <div class="modal__field">
+        <label class="modal__label">Active Days</label>
+        <div class="days-selector" id="daysSelector"></div>
+      </div>
+      <div class="modal__actions">
+        <button class="modal__btn modal__btn--cancel" id="modalCancel">Cancel</button>
+        <button class="modal__btn modal__btn--primary" id="modalSave" style="background:var(--grad-primary);">Save
+          Habit</button>
+      </div>
     </div>
   </div>
-</div>
 
-<div class="celebration-overlay" id="celebrationOverlay"></div>
+  <div class="celebration-overlay" id="celebrationOverlay"></div>
 
-<svg width="0" height="0" style="position:absolute">
-  <defs>
-    <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#00d4ff"/>
-      <stop offset="100%" stop-color="#7c3aed"/>
-    </linearGradient>
-  </defs>
-</svg>
+  <svg width="0" height="0" style="position:absolute">
+    <defs>
+      <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#00d4ff" />
+        <stop offset="100%" stop-color="#7c3aed" />
+      </linearGradient>
+    </defs>
+  </svg>
 
-<div class="modal-overlay" id="settingsModal">
-  <div class="modal">
-    <button class="modal__close" id="settingsClose">✕</button>
-    <h2 class="modal__title">Sync Settings</h2>
-    <p style="color:var(--t2);font-size:0.9rem;margin-bottom:16px;">Connect Firebase Realtime DB to sync across devices.</p>
-    <div class="modal__field">
-      <label class="modal__label">Firebase DB URL</label>
-      <input class="modal__input" type="text" id="dbUrl" placeholder="https://your-project.firebaseio.com">
-    </div>
-    <div class="modal__field">
-      <label class="modal__label">Database Secret / Auth (Optional)</label>
-      <input class="modal__input" type="password" id="dbKey" placeholder="Your DB Auth Token">
-    </div>
-    <div class="modal__actions">
-      <button class="modal__btn modal__btn--cancel" id="btnDisconnectDb" style="color:rgba(248, 113, 113, 0.8);border-color:rgba(248, 113, 113, 0.3);">Disconnect</button>
-      <button class="modal__btn modal__btn--primary" id="btnSaveDb" style="background:var(--grad-primary);">Save & Sync</button>
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal">
+      <button class="modal__close" id="settingsClose">✕</button>
+      <h2 class="modal__title">Sync Settings</h2>
+      <p style="color:var(--t2);font-size:0.9rem;margin-bottom:16px;">Connect Firebase Realtime DB to sync across
+        devices.</p>
+      <div class="modal__field">
+        <label class="modal__label">Firebase DB URL</label>
+        <input class="modal__input" type="text" id="dbUrl" placeholder="https://your-project.firebaseio.com">
+      </div>
+      <div class="modal__field">
+        <label class="modal__label">Database Secret / Auth (Optional)</label>
+        <input class="modal__input" type="password" id="dbKey" placeholder="Your DB Auth Token">
+      </div>
+
+      <hr style="border:none;border-top:1px solid rgba(255,255,255,0.1);margin:20px 0;">
+      <p style="color:var(--t2);font-size:0.9rem;margin-bottom:16px;"><strong>Optional Push Notifications Setup</strong>
+      </p>
+      <div class="modal__field">
+        <label class="modal__label">Firebase App Config (JSON)</label>
+        <textarea class="modal__input" id="fcmConfig" rows="3" placeholder='{"apiKey": "...", "projectId": "...", ...}'
+          style="font-family:monospace;font-size:0.8rem;"></textarea>
+      </div>
+      <div class="modal__field">
+        <label class="modal__label">Web Push VAPID Key</label>
+        <input class="modal__input" type="password" id="vapidKey" placeholder="BP... ...">
+      </div>
+
+      <div class="modal__actions">
+        <button class="modal__btn modal__btn--cancel" id="btnDisconnectDb"
+          style="color:rgba(248, 113, 113, 0.8);border-color:rgba(248, 113, 113, 0.3);">Disconnect</button>
+        <button class="modal__btn modal__btn--primary" id="btnSaveDb" style="background:var(--grad-primary);">Save &
+          Sync</button>
+      </div>
     </div>
   </div>
-</div>
 
-<script src="db.js"></script>
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(err => console.error(err));
-  }
-</script>
-<script src="app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-messaging-compat.js"></script>
+
+  <script src="db.js"></script>
+  <script>
+    let swReg = null;
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').then(reg => {
+        swReg = reg;
+      }).catch(err => console.error(err));
+    }
+  </script>
+  <script src="app.js"></script>
 </body>
+
 </html>

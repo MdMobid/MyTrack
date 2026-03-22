@@ -774,8 +774,10 @@
     if (btnSettings && settingsModal) {
       btnSettings.addEventListener('click', () => {
         if (window.db && window.db.config) {
-          document.getElementById('dbUrl').value = window.db.config.url;
+          document.getElementById('dbUrl').value = window.db.config.url || '';
           document.getElementById('dbKey').value = window.db.config.key || '';
+          document.getElementById('fcmConfig').value = window.db.config.fcmConfig || '';
+          document.getElementById('vapidKey').value = window.db.config.vapidKey || '';
         }
         settingsModal.classList.add('open');
       });
@@ -783,17 +785,73 @@
       document.getElementById('btnDisconnectDb').addEventListener('click', () => {
         window.db.clearConfig();
         settingsModal.classList.remove('open');
-        alert("Disconnected from Firebase Sync.");
+        alert("Disconnected from Firebase Sync & Push.");
       });
       document.getElementById('btnSaveDb').addEventListener('click', () => {
         const url = document.getElementById('dbUrl').value.trim();
         const key = document.getElementById('dbKey').value.trim();
-        if (!url) return alert("Please enter the Firebase DB URL");
-        window.db.saveConfig(url, key);
+        const fcmCfg = document.getElementById('fcmConfig').value.trim();
+        const vapid = document.getElementById('vapidKey').value.trim();
+        
+        if (!url) return alert("Please enter the Firebase DB URL to enable Sync.");
+        
+        // Save to DB wrapper config (we'll adapt db.js slightly so it accepts all this)
+        const newConfig = { url, key, fcmConfig: fcmCfg, vapidKey: vapid };
+        localStorage.setItem('mytrack_db_config', JSON.stringify(newConfig));
+        window.db.config = newConfig;
+        
         settingsModal.classList.remove('open');
-        alert("Firebase Sync Configured! Your data will now auto-sync in the background.");
-        loadState(); // trigger a re-sync
+        alert("Sync & Push Settings Configured!");
+        loadState();
+        
+        // Trigger Push Registration if settings were provided
+        if (fcmCfg && vapid) {
+          registerForPushNotifications(fcmCfg, vapid);
+        }
       });
+    }
+
+    // Try auto-registration on boot if config exists
+    try {
+      if (window.db && window.db.config && window.db.config.fcmConfig && window.db.config.vapidKey) {
+        setTimeout(() => {
+          registerForPushNotifications(window.db.config.fcmConfig, window.db.config.vapidKey);
+        }, 3000);
+      }
+    } catch(e) { }
+  }
+
+  // ── Push Notification Sub ────────────────────────────────────
+  async function registerForPushNotifications(configStr, vapidKey) {
+    try {
+      if (Notification.permission === 'denied') return;
+      
+      const config = JSON.parse(configStr);
+      if (!firebase.apps.length) {
+        firebase.initializeApp(config);
+      }
+      const messaging = firebase.messaging();
+      
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted' && window.swReg) {
+        const token = await messaging.getToken({
+          vapidKey: vapidKey,
+          serviceWorkerRegistration: window.swReg
+        });
+        
+        if (token && window.db) {
+          // Save the device token silently up to the Cloud!
+          // Replace illegal Firebase key characters in token if necessary, but DB URL allows pushing token objects.
+          // Wait, better yet, upload an object payload where token is the key or inside it.
+          // Realtime DB doesn't allow slashes or dots or $ # [ ] in document keys.
+          const cleanKey = token.substring(0, 30).replace(/[^a-zA-Z0-9]/g, ''); 
+          // Use PUT via upsertDocument to save it to /tokens
+          window.db.upsertDocument('tokens', { _id: cleanKey }, { token: token, lastActive: Date.now(), platform: navigator.userAgent });
+          console.log("FCM Token dynamically registered and saved to Firebase via Queue!");
+        }
+      }
+    } catch(e) {
+      console.warn("FCM Registration failed:", e);
     }
   }
 
