@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,129 +12,149 @@
   <meta name="theme-color" content="#0f172a">
   <link rel="apple-touch-icon" href="icon-192.png">
 </head>
+
 <body>
-<div class="app">
+  <div class="app">
 
-  <!-- NAV -->
-  <nav class="topnav">
-    <a href="index.html" class="topnav__brand">
-      <div class="topnav__logo">🎯</div>
-      <div><div class="topnav__name">MyTrack</div><div class="topnav__tagline">Personal Dashboard</div></div>
-    </a>
-    <div class="topnav__links">
-      <a href="index.html"    class="topnav__link"><span class="topnav__link-icon">🎯</span><span>Habits</span></a>
-      <a href="todos.html"    class="topnav__link active"><span class="topnav__link-icon">✅</span><span>Todos</span></a>
-      <a href="expenses.html" class="topnav__link"><span class="topnav__link-icon">💰</span><span>Expenses</span></a>
-    </div>
-    <button class="btn-primary" id="btnAddTodo" style="background:var(--grad-todo);box-shadow:0 4px 18px var(--pink-dim);">
-      <span style="font-size:1.1rem;font-weight:300">＋</span> New Task
-    </button>
-  </nav>
+    <!-- NAV -->
+    <nav class="topnav">
+      <a href="index.html" class="topnav__brand">
+        <div class="topnav__logo">🎯</div>
+        <div>
+          <div class="topnav__name">MyTrack</div>
+          <div class="topnav__tagline">Personal Dashboard</div>
+        </div>
+      </a>
+      <div class="topnav__links">
+        <a href="index.html" class="topnav__link"><span class="topnav__link-icon">🎯</span><span>Habits</span></a>
+        <a href="todos.html" class="topnav__link active"><span class="topnav__link-icon">✅</span><span>Todos</span></a>
+        <a href="expenses.html" class="topnav__link"><span class="topnav__link-icon">💰</span><span>Expenses</span></a>
+      </div>
+      <button class="btn-primary" id="btnAddTodo"
+        style="background:var(--grad-todo);box-shadow:0 4px 18px var(--pink-dim);">
+        <span style="font-size:1.1rem;font-weight:300">＋</span> New Task
+      </button>
+    </nav>
 
-  <!-- STATS -->
-  <section class="todo-stats" id="todoStats">
-    <div class="tstat tstat--total">
-      <div class="tstat__icon">📋</div>
-      <div><div class="tstat__value" id="statTotal">0</div><div class="tstat__label">Total Tasks</div></div>
-      <div class="tstat__glow"></div>
-    </div>
-    <div class="tstat tstat--open">
-      <div class="tstat__icon">⏳</div>
-      <div><div class="tstat__value" id="statOpen">0</div><div class="tstat__label">Open</div></div>
-      <div class="tstat__glow"></div>
-    </div>
-    <div class="tstat tstat--done">
-      <div class="tstat__icon">✅</div>
-      <div><div class="tstat__value" id="statDone">0</div><div class="tstat__label">Completed</div></div>
-      <div class="tstat__glow"></div>
-    </div>
-    <div class="tstat tstat--overdue">
-      <div class="tstat__icon">🔥</div>
-      <div><div class="tstat__value" id="statOverdue">0</div><div class="tstat__label">Overdue</div></div>
-      <div class="tstat__glow"></div>
-    </div>
-  </section>
+    <!-- STATS -->
+    <section class="todo-stats" id="todoStats">
+      <div class="tstat tstat--total">
+        <div class="tstat__icon">📋</div>
+        <div>
+          <div class="tstat__value" id="statTotal">0</div>
+          <div class="tstat__label">Total Tasks</div>
+        </div>
+        <div class="tstat__glow"></div>
+      </div>
+      <div class="tstat tstat--open">
+        <div class="tstat__icon">⏳</div>
+        <div>
+          <div class="tstat__value" id="statOpen">0</div>
+          <div class="tstat__label">Open</div>
+        </div>
+        <div class="tstat__glow"></div>
+      </div>
+      <div class="tstat tstat--done">
+        <div class="tstat__icon">✅</div>
+        <div>
+          <div class="tstat__value" id="statDone">0</div>
+          <div class="tstat__label">Completed</div>
+        </div>
+        <div class="tstat__glow"></div>
+      </div>
+      <div class="tstat tstat--overdue">
+        <div class="tstat__icon">🔥</div>
+        <div>
+          <div class="tstat__value" id="statOverdue">0</div>
+          <div class="tstat__label">Overdue</div>
+        </div>
+        <div class="tstat__glow"></div>
+      </div>
+    </section>
 
-  <!-- FILTERS -->
-  <div class="todo-filters" id="todoFilters">
-    <div class="filter-group">
-      <button class="filter-btn active" data-filter="all">All</button>
-      <button class="filter-btn" data-filter="open">Open</button>
-      <button class="filter-btn" data-filter="done">Done</button>
-      <button class="filter-btn" data-filter="overdue">Overdue</button>
+    <!-- FILTERS -->
+    <div class="todo-filters" id="todoFilters">
+      <div class="filter-group">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="open">Open</button>
+        <button class="filter-btn" data-filter="done">Done</button>
+        <button class="filter-btn" data-filter="overdue">Overdue</button>
+      </div>
+      <div class="filter-group">
+        <button class="filter-btn" data-priority="all">Any Priority</button>
+        <button class="filter-btn" data-priority="high">🔴 High</button>
+        <button class="filter-btn" data-priority="medium">🟡 Medium</button>
+        <button class="filter-btn" data-priority="low">🟢 Low</button>
+      </div>
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchTodo" class="search-input" placeholder="Search tasks...">
+      </div>
     </div>
-    <div class="filter-group">
-      <button class="filter-btn" data-priority="all">Any Priority</button>
-      <button class="filter-btn" data-priority="high">🔴 High</button>
-      <button class="filter-btn" data-priority="medium">🟡 Medium</button>
-      <button class="filter-btn" data-priority="low">🟢 Low</button>
-    </div>
-    <div class="search-wrap">
-      <span class="search-icon">🔍</span>
-      <input type="text" id="searchTodo" class="search-input" placeholder="Search tasks...">
+
+    <!-- MAIN -->
+    <main id="todoMain"></main>
+  </div>
+
+  <!-- ADD/EDIT MODAL -->
+  <div class="modal-overlay" id="todoModal">
+    <div class="modal">
+      <button class="modal__close" id="modalClose">✕</button>
+      <h2 class="modal__title" id="modalTitle">New Task</h2>
+
+      <div class="modal__field">
+        <label class="modal__label">Task Title</label>
+        <input class="modal__input" type="text" id="taskTitle" placeholder="What needs to be done?">
+      </div>
+      <div class="modal__field">
+        <label class="modal__label">Category</label>
+        <div style="display:flex;gap:8px;">
+          <select class="modal__select" id="taskCategory" style="flex:1"></select>
+          <input class="modal__input" id="newCategory" placeholder="New category…" style="flex:1">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="modal__field">
+          <label class="modal__label">Priority</label>
+          <select class="modal__select" id="taskPriority">
+            <option value="high">🔴 High</option>
+            <option value="medium" selected>🟡 Medium</option>
+            <option value="low">🟢 Low</option>
+          </select>
+        </div>
+        <div class="modal__field">
+          <label class="modal__label">Due Date</label>
+          <input class="modal__input" type="date" id="taskDue">
+        </div>
+      </div>
+      <div class="modal__field">
+        <label class="modal__label">Notes</label>
+        <textarea class="modal__textarea" id="taskNotes" placeholder="Optional notes…"></textarea>
+      </div>
+      <div class="modal__field" id="subtaskField">
+        <label class="modal__label">Sub-tasks</label>
+        <div id="subtaskList" class="subtask-list"></div>
+        <div style="display:flex;gap:8px;margin-top:6px;">
+          <input class="modal__input" id="subtaskInput" placeholder="Add sub-task…" style="flex:1">
+          <button class="btn-primary" id="btnAddSubtask"
+            style="background:var(--grad-todo);padding:10px 14px;">＋</button>
+        </div>
+      </div>
+      <div class="modal__actions">
+        <button class="modal__btn modal__btn--cancel" id="modalCancel">Cancel</button>
+        <button class="modal__btn modal__btn--primary" id="modalSave" style="background:var(--grad-todo);">Save
+          Task</button>
+      </div>
     </div>
   </div>
 
-  <!-- MAIN -->
-  <main id="todoMain"></main>
-</div>
-
-<!-- ADD/EDIT MODAL -->
-<div class="modal-overlay" id="todoModal">
-  <div class="modal">
-    <button class="modal__close" id="modalClose">✕</button>
-    <h2 class="modal__title" id="modalTitle">New Task</h2>
-
-    <div class="modal__field">
-      <label class="modal__label">Task Title</label>
-      <input class="modal__input" type="text" id="taskTitle" placeholder="What needs to be done?">
-    </div>
-    <div class="modal__field">
-      <label class="modal__label">Category</label>
-      <div style="display:flex;gap:8px;">
-        <select class="modal__select" id="taskCategory" style="flex:1"></select>
-        <input class="modal__input" id="newCategory" placeholder="New category…" style="flex:1">
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-      <div class="modal__field">
-        <label class="modal__label">Priority</label>
-        <select class="modal__select" id="taskPriority">
-          <option value="high">🔴 High</option>
-          <option value="medium" selected>🟡 Medium</option>
-          <option value="low">🟢 Low</option>
-        </select>
-      </div>
-      <div class="modal__field">
-        <label class="modal__label">Due Date</label>
-        <input class="modal__input" type="date" id="taskDue">
-      </div>
-    </div>
-    <div class="modal__field">
-      <label class="modal__label">Notes</label>
-      <textarea class="modal__textarea" id="taskNotes" placeholder="Optional notes…"></textarea>
-    </div>
-    <div class="modal__field" id="subtaskField">
-      <label class="modal__label">Sub-tasks</label>
-      <div id="subtaskList" class="subtask-list"></div>
-      <div style="display:flex;gap:8px;margin-top:6px;">
-        <input class="modal__input" id="subtaskInput" placeholder="Add sub-task…" style="flex:1">
-        <button class="btn-primary" id="btnAddSubtask" style="background:var(--grad-todo);padding:10px 14px;">＋</button>
-      </div>
-    </div>
-    <div class="modal__actions">
-      <button class="modal__btn modal__btn--cancel" id="modalCancel">Cancel</button>
-      <button class="modal__btn modal__btn--primary" id="modalSave" style="background:var(--grad-todo);">Save Task</button>
-    </div>
-  </div>
-</div>
-
-<script src="db.js"></script>
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(err => console.error(err));
-  }
-</script>
-<script src="todos.js"></script>
+  <script src="db.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(err => console.error(err));
+    }
+  </script>
+  <script src="todos.js"></script>
 </body>
+
 </html>

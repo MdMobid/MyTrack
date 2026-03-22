@@ -6,13 +6,13 @@ class DataAPI {
   constructor() {
     this.configKey = 'mytrack_db_config';
     this.queueKey = 'mytrack_sync_queue';
-    
+
     // Load config: { url, key }
     this.config = JSON.parse(localStorage.getItem(this.configKey) || 'null');
-    
+
     // Load queue of pending offline actions
     this.queue = JSON.parse(localStorage.getItem(this.queueKey) || '[]');
-    
+
     // Add network listeners for auto-sync
     window.addEventListener('online', () => this.processQueue());
 
@@ -61,7 +61,7 @@ class DataAPI {
     if (!res.ok) {
       throw new Error(`Firebase Error: ${res.status}`);
     }
-    
+
     return await res.json();
   }
 
@@ -83,14 +83,14 @@ class DataAPI {
     if (this.queue.length === 0) return;
 
     this.isSyncing = true;
-    
+
     try {
       while (this.queue.length > 0) {
         const job = this.queue[0];
-        
+
         // Firebase specific execution
         await this._fetchAPI(job.payload.path, job.action, job.payload.data);
-        
+
         // Remove completed job
         this.queue.shift();
         localStorage.setItem(this.queueKey, JSON.stringify(this.queue));
@@ -120,9 +120,9 @@ class DataAPI {
   upsertDocument(collection, filter, updateDoc) {
     // For Firebase, we can just PUT directly to the path collection/id to overwrite/create it
     if (!filter._id) return;
-    this.queueAction('PUT', { 
-      path: `${collection}/${filter._id}`, 
-      data: updateDoc 
+    this.queueAction('PUT', {
+      path: `${collection}/${filter._id}`,
+      data: updateDoc
     });
   }
 }
