@@ -1048,6 +1048,13 @@
         openModal();
       }
     });
+
+    // ── Settings Dropdown Toggle ─────────────────────────────────
+    window.toggleSettingsDropdown = function(dropdownId) {
+      const dropdown = document.getElementById(dropdownId);
+      if (!dropdown) return;
+      dropdown.classList.toggle('settings-dropdown--open');
+    };
   
     // ── Init ──────────────────────────────────────────────────
     function init() {

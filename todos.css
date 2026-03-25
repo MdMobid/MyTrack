@@ -555,5 +555,24 @@
 
   .todo-filters {
     gap: 8px;
+    flex-wrap: wrap;
+  }
+  
+  .filter-btn {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+  
+  .todo-card {
+    padding: 12px;
+  }
+  
+  .todo-card__title {
+    font-size: 0.9rem;
+  }
+  
+  .todo-card__meta {
+    font-size: 0.7rem;
+    flex-wrap: wrap;
   }
 }

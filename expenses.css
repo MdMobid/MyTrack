@@ -678,6 +678,17 @@
   .estat__label {
     font-size: 0.6rem;
   }
+  
+  .exp-item {
+    padding: 12px;
+    font-size: 0.85rem;
+  }
+  
+  .exp-add-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
 
   .cat-filter-select {
     flex: 1;

@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MyTrack — Habits</title>
+  <link rel="stylesheet" href="shared.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <style>
+    /* ── Emoji field ──────────────────────────────────────── */
+    .emoji-field {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .emoji-field__preview {
+      font-size: 2rem;
+      line-height: 1;
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      background: var(--neu-bg, #1e293b);
+      box-shadow: var(--neu-inset, inset 2px 2px 6px rgba(0, 0, 0, .4), inset -2px -2px 6px rgba(255, 255, 255, .04));
+      flex-shrink: 0;
+      transition: opacity 0.2s;
+      user-select: none;
+    }
+
+    .emoji-field__input {
+      /* Inherits .modal__input styles; we just tweak width */
+      width: 120px !important;
+      font-size: 1.4rem !important;
+      text-align: center;
+      letter-spacing: 2px;
+    }
+
+    .emoji-field__hint {
+      font-size: 0.78rem;
+      color: var(--t3, rgba(255, 255, 255, 0.35));
+      line-height: 1.4;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+
+    <nav class="topnav">
+      <a href="index.html" class="topnav__brand">
+        <div class="topnav__logo">🎯</div>
+        <div>
+          <div class="topnav__name">MyTrack</div>
+          <div class="topnav__tagline">Personal Dashboard</div>
+        </div>
+      </a>
+      <div class="topnav__links">
+        <a href="index.html" class="topnav__link"><span class="topnav__link-icon">📅</span><span>Today</span></a>
+        <a href="habits.html" class="topnav__link active"><span
+            class="topnav__link-icon">🎯</span><span>Habits</span></a>
+        <a href="todos.html" class="topnav__link"><span class="topnav__link-icon">✅</span><span>Todos</span></a>
+        <a href="expenses.html" class="topnav__link"><span class="topnav__link-icon">💰</span><span>Expenses</span></a>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <nav class="view-switcher" id="viewSwitcher">
+          <button class="view-switcher__btn active" data-view="daily" id="btn-daily">📅 Daily</button>
+          <button class="view-switcher__btn" data-view="weekly" id="btn-weekly">📊 Weekly</button>
+          <button class="view-switcher__btn" data-view="monthly" id="btn-monthly">🗓️ Monthly</button>
+        </nav>
+        <button class="btn-add-habit" id="btnAddHabit">
+          <span class="btn-add-habit__plus">＋</span> New Habit
+        </button>
+      </div>
+    </nav>
+
+    <section class="stats-bar" id="statsBar">
+      <div class="stat-card stat-card--progress">
+        <div class="stat-card__icon">📈</div>
+        <div>
+          <div class="stat-card__value" id="statTodayPct">0%</div>
+          <div class="stat-card__label">Today's Progress</div>
+        </div>
+        <div class="stat-card__glow"></div>
+      </div>
+      <div class="stat-card stat-card--streak">
+        <div class="stat-card__icon">🔥</div>
+        <div>
+          <div class="stat-card__value" id="statStreak">0</div>
+          <div class="stat-card__label">Day Streak</div>
+        </div>
+        <div class="stat-card__glow"></div>
+      </div>
+      <div class="stat-card stat-card--completed">
+        <div class="stat-card__icon">✅</div>
+        <div>
+          <div class="stat-card__value" id="statCompleted">0</div>
+          <div class="stat-card__label">Completed Today</div>
+        </div>
+        <div class="stat-card__glow"></div>
+      </div>
+      <div class="stat-card stat-card--best">
+        <div class="stat-card__icon">🏆</div>
+        <div>
+          <div class="stat-card__value" id="statBestStreak">0</div>
+          <div class="stat-card__label">Best Streak</div>
+        </div>
+        <div class="stat-card__glow"></div>
+      </div>
+    </section>
+
+    <main id="mainContent"></main>
+  </div>
+
+  <!-- ── Add / Edit Habit Modal ─────────────────────────── -->
+  <div class="modal-overlay" id="habitModal">
+    <div class="modal">
+      <button class="modal__close" id="modalClose" onclick="document.getElementById('modalCancel').click()">✕</button>
+      <h2 class="modal__title" id="modalTitle">New Habit</h2>
+
+      <div class="modal__field">
+        <label class="modal__label" for="habitName">Habit Name</label>
+        <input class="modal__input" type="text" id="habitName" placeholder="e.g. Morning Meditation" maxlength="40">
+      </div>
+
+      <!-- Emoji: free-type input + live preview -->
+      <div class="modal__field">
+        <label class="modal__label">Icon</label>
+        <div class="emoji-field">
+          <div class="emoji-field__preview" id="emojiPreview">💪</div>
+          <input class="modal__input emoji-field__input" type="text" id="emojiInput" placeholder="✏️" maxlength="8"
+            autocomplete="off" spellcheck="false">
+          <span class="emoji-field__hint">Type or paste<br>any emoji</span>
+        </div>
+
+      </div>
+
+      <div class="modal__field">
+        <label class="modal__label">Color</label>
+        <div class="color-picker" id="colorPicker"></div>
+      </div>
+
+      <div class="modal__field">
+        <label class="modal__label">Active Days</label>
+        <div class="days-selector" id="daysSelector"></div>
+      </div>
+
+      <div class="modal__actions">
+        <button class="modal__btn modal__btn--cancel" id="modalCancel">Cancel</button>
+        <button class="modal__btn modal__btn--primary" id="modalSave" style="background:var(--grad-primary);">Save
+          Habit</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="celebration-overlay" id="celebrationOverlay"></div>
+
+  <svg width="0" height="0" style="position:absolute">
+    <defs>
+      <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#00d4ff" />
+        <stop offset="100%" stop-color="#7c3aed" />
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <!-- ── Settings Modal ─────────────────────────────────── -->
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal">
+      <button class="modal__close" id="settingsClose">✕</button>
+      <h2 class="modal__title">Sync Settings</h2>
+      <p style="color:var(--t2);font-size:0.9rem;margin-bottom:16px;">Connect Firebase Realtime DB to sync across devices.</p>
+      <div class="modal__field">
+        <label class="modal__label">Firebase DB URL</label>
+        <input class="modal__input" type="text" id="dbUrl" placeholder="https://your-project.firebaseio.com">
+      </div>
+      <div class="modal__field">
+        <label class="modal__label">Database Secret / Auth (Optional)</label>
+        <input class="modal__input" type="password" id="dbKey" placeholder="Your DB Auth Token">
+      </div>
+
+      <hr style="border:none;border-top:1px solid rgba(255,255,255,0.1);margin:20px 0;">
+
+      <div class="settings-dropdown" id="pushNotifsDropdown">
+        <button class="settings-dropdown__trigger" onclick="toggleSettingsDropdown('pushNotifsDropdown')">
+          <span class="settings-dropdown__icon">🔔</span>
+          <span class="settings-dropdown__label">Optional Push Notifications Setup</span>
+          <span class="settings-dropdown__arrow">▶</span>
+        </button>
+        <div class="settings-dropdown__content">
+          <div class="modal__field">
+            <label class="modal__label">Firebase App Config (JSON)</label>
+            <textarea class="modal__input" id="fcmConfig" rows="3" placeholder='{"apiKey": "...", "projectId": "...", ...}' style="font-family:monospace;font-size:0.8rem;"></textarea>
+          </div>
+          <div class="modal__field">
+            <label class="modal__label">Web Push VAPID Key</label>
+            <input class="modal__input" type="password" id="vapidKey" placeholder="BP... ...">
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-dropdown" id="importExportDropdown">
+        <button class="settings-dropdown__trigger" onclick="toggleSettingsDropdown('importExportDropdown')">
+          <span class="settings-dropdown__icon">📤</span>
+          <span class="settings-dropdown__label">Import / Export Data</span>
+          <span class="settings-dropdown__arrow">▶</span>
+        </button>
+        <div class="settings-dropdown__content">
+          <div class="import-export-buttons">
+            <button class="import-export-btn" id="btnImportData">
+              <span class="import-export-btn__icon"></span>
+              <span class="import-export-btn__text">Import Data</span>
+            </button>
+            <button class="import-export-btn" id="btnExportData">
+              <span class="import-export-btn__icon"></span>
+              <span class="import-export-btn__text">Export Data</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal__actions">
+        <button class="modal__btn modal__btn--cancel" id="btnDisconnectDb" style="color:rgba(248, 113, 113, 0.8);border-color:rgba(248, 113, 113, 0.3);">Disconnect</button>
+        <button class="modal__btn modal__btn--primary" id="btnSaveDb" style="background:var(--grad-primary);">Save & Sync</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-messaging-compat.js"></script>
+
+  <script src="db.js"></script>
+  <script>
+    window.swReg = null;
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').then(reg => {
+        window.swReg = reg;
+      }).catch(err => console.error(err));
+    }
+  </script>
+  <script src="app.js"></script>
+</body>
+
+</html>

@@ -1560,6 +1560,30 @@ h4 {
   .monthly-left {
     flex-direction: column;
   }
+  
+  /* Card text overflow for mobile */
+  .habit-card__name {
+    max-width: 180px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  /* Touch-friendly checkbox */
+  .habit-toggle {
+    padding: 8px;
+  }
+  
+  .habit-toggle__visual {
+    width: 28px;
+    height: 28px;
+  }
+  
+  /* Filter buttons */
+  .filter-group {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
 }
 
 /* ── Inactive habits (not scheduled today) ── */
