@@ -1510,6 +1510,31 @@ h4 {
     gap: 10px;
   }
 
+  .stat-card {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .stat-card__icon {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+
+  .stat-card__value {
+    font-size: 1.1rem;
+  }
+
+  .stat-card__label {
+    font-size: 0.6rem;
+  }
+
+  .habit-card__emoji {
+    width: 32px;
+    height: 32px;
+    font-size: 1.1rem;
+  }
+
   .view-switcher__btn {
     padding: 7px 12px;
     font-size: 0.78rem;

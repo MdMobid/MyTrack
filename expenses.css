@@ -426,6 +426,32 @@
   outline: none;
 }
 
+.btn-icon {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: var(--r-xs);
+  background: var(--bg-deep);
+  color: var(--t2);
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--neu-out-xs);
+  transition: all 0.2s var(--ease);
+  flex-shrink: 0;
+}
+
+.btn-icon:hover {
+  color: var(--cyan);
+  box-shadow: var(--neu-out-sm);
+}
+
+.btn-icon:active {
+  box-shadow: var(--neu-in-xs);
+}
+
 .pay-segment {
   display: flex;
   background: var(--bg-deep);
@@ -632,6 +658,25 @@
 @media(max-width:600px) {
   .exp-stats {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .estat {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .estat__icon {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+
+  .estat__value {
+    font-size: 1.1rem;
+  }
+
+  .estat__label {
+    font-size: 0.6rem;
   }
 
   .cat-filter-select {

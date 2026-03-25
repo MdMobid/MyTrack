@@ -569,10 +569,36 @@ h4 {
     justify-content: center;
   }
 
-  .btn-settings {
+  nav .btn-settings {
     position: absolute;
     top: 22px;
     right: 20px;
     margin: 0 !important;
   }
+}
+
+.btn-settings {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: var(--r-xs);
+  background: var(--bg-deep);
+  color: var(--t2);
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--neu-out-xs);
+  transition: all 0.2s var(--ease);
+  flex-shrink: 0;
+}
+
+.btn-settings:hover {
+  color: var(--cyan);
+  box-shadow: var(--neu-out-sm);
+}
+
+.btn-settings:active {
+  box-shadow: var(--neu-in-xs);
 }

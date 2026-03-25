@@ -534,6 +534,25 @@
     grid-template-columns: 1fr 1fr;
   }
 
+  .tstat {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .tstat__icon {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+
+  .tstat__value {
+    font-size: 1.1rem;
+  }
+
+  .tstat__label {
+    font-size: 0.6rem;
+  }
+
   .todo-filters {
     gap: 8px;
   }
