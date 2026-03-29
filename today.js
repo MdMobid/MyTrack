@@ -313,13 +313,6 @@
               </div>
             </label>
           </div>
-          <div class="habit-card__bottom">
-            <div class="habit-card__days">
-              <div class="habit-card__day priority-badge priority-${task.priority || 'medium'}">
-                ${priorityLabel}
-              </div>
-            </div>
-          </div>
         </div>
       `;
     }
