@@ -34,6 +34,9 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  // Only cache GET requests — POST/PUT/etc. are unsupported by Cache API
+  if (e.request.method !== 'GET') return;
+
   // Do not cache API requests to MongoDB
   if (e.request.url.includes('mongodb-api.com')) {
     return; // Pass through to browser fetch

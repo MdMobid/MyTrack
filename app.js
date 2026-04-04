@@ -1062,10 +1062,13 @@
       loadState();
       initModal();
   
-      $('#viewSwitcher').addEventListener('click', (e) => {
-        const btn = e.target.closest('.view-switcher__btn');
-        if (btn) switchView(btn.dataset.view);
-      });
+      const viewSwitcher = $('#viewSwitcher');
+      if (viewSwitcher) {
+        viewSwitcher.addEventListener('click', (e) => {
+          const btn = e.target.closest('.view-switcher__btn');
+          if (btn) switchView(btn.dataset.view);
+        });
+      }
   
       $('#btnAddHabit').addEventListener('click', () => openModal());
   

@@ -65,7 +65,16 @@
       </a>
       <div class="topnav__links">
         <a href="index.html" class="topnav__link"><span class="topnav__link-icon">📅</span><span>Today</span></a>
-        <a href="habits.html" class="topnav__link active"><span class="topnav__link-icon">🎯</span><span>Habits</span></a>
+        <div class="topnav__dropdown">
+          <button class="topnav__link--trigger active" id="habitsDropdownBtn">
+            <span class="topnav__link-icon">🎯</span><span>Habits</span>
+          </button>
+          <div class="topnav__dropdown-menu">
+            <a href="#" class="topnav__dropdown-item active" data-view="daily"><span>📅</span> Daily</a>
+            <a href="#" class="topnav__dropdown-item" data-view="weekly"><span>📊</span> Weekly</a>
+            <a href="#" class="topnav__dropdown-item" data-view="monthly"><span>🗓️</span> Monthly</a>
+          </div>
+        </div>
         <a href="todos.html" class="topnav__link"><span class="topnav__link-icon">✅</span><span>Todos</span></a>
         <a href="expenses.html" class="topnav__link"><span class="topnav__link-icon">💰</span><span>Expenses</span></a>
       </div>
@@ -110,7 +119,6 @@
         <div class="stat-card__glow"></div>
       </div>
     </section>
-
     <main id="mainContent"></main>
   </div>
 
