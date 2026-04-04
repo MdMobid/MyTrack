@@ -656,6 +656,13 @@
 }
 
 @media(max-width:600px) {
+  .exp-left {
+    flex-direction: column;
+    flex-wrap: nowrap;
+  }
+}
+
+@media(max-width:600px) {
   .exp-stats {
     grid-template-columns: 1fr 1fr;
   }
@@ -688,7 +695,6 @@
     width: 100%;
     justify-content: center;
   }
-}
 
   .cat-filter-select {
     flex: 1;
@@ -696,7 +702,7 @@
   }
 
   .pay-seg-btn {
-    padding: 6px 4px;
+    padding: 10px 6px;
     font-size: 0.70rem;
     letter-spacing: -0.02em;
   }

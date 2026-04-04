@@ -65,19 +65,13 @@
       </a>
       <div class="topnav__links">
         <a href="index.html" class="topnav__link"><span class="topnav__link-icon">📅</span><span>Today</span></a>
-        <a href="habits.html" class="topnav__link active"><span
-            class="topnav__link-icon">🎯</span><span>Habits</span></a>
+        <a href="habits.html" class="topnav__link active"><span class="topnav__link-icon">🎯</span><span>Habits</span></a>
         <a href="todos.html" class="topnav__link"><span class="topnav__link-icon">✅</span><span>Todos</span></a>
         <a href="expenses.html" class="topnav__link"><span class="topnav__link-icon">💰</span><span>Expenses</span></a>
       </div>
       <div style="display:flex;align-items:center;gap:8px;">
-        <nav class="view-switcher" id="viewSwitcher">
-          <button class="view-switcher__btn active" data-view="daily" id="btn-daily">📅 Daily</button>
-          <button class="view-switcher__btn" data-view="weekly" id="btn-weekly">📊 Weekly</button>
-          <button class="view-switcher__btn" data-view="monthly" id="btn-monthly">🗓️ Monthly</button>
-        </nav>
         <button class="btn-add-habit" id="btnAddHabit">
-          <span class="btn-add-habit__plus">＋</span> New Habit
+          <span class="btn-add-habit__plus">＋</span><span class="btn-text"> New Habit</span>
         </button>
       </div>
     </nav>
@@ -177,7 +171,8 @@
     <div class="modal">
       <button class="modal__close" id="settingsClose">✕</button>
       <h2 class="modal__title">Sync Settings</h2>
-      <p style="color:var(--t2);font-size:0.9rem;margin-bottom:16px;">Connect Firebase Realtime DB to sync across devices.</p>
+      <p style="color:var(--t2);font-size:0.9rem;margin-bottom:16px;">Connect Firebase Realtime DB to sync across
+        devices.</p>
       <div class="modal__field">
         <label class="modal__label">Firebase DB URL</label>
         <input class="modal__input" type="text" id="dbUrl" placeholder="https://your-project.firebaseio.com">
@@ -198,7 +193,9 @@
         <div class="settings-dropdown__content">
           <div class="modal__field">
             <label class="modal__label">Firebase App Config (JSON)</label>
-            <textarea class="modal__input" id="fcmConfig" rows="3" placeholder='{"apiKey": "...", "projectId": "...", ...}' style="font-family:monospace;font-size:0.8rem;"></textarea>
+            <textarea class="modal__input" id="fcmConfig" rows="3"
+              placeholder='{"apiKey": "...", "projectId": "...", ...}'
+              style="font-family:monospace;font-size:0.8rem;"></textarea>
           </div>
           <div class="modal__field">
             <label class="modal__label">Web Push VAPID Key</label>
@@ -228,8 +225,10 @@
       </div>
 
       <div class="modal__actions">
-        <button class="modal__btn modal__btn--cancel" id="btnDisconnectDb" style="color:rgba(248, 113, 113, 0.8);border-color:rgba(248, 113, 113, 0.3);">Disconnect</button>
-        <button class="modal__btn modal__btn--primary" id="btnSaveDb" style="background:var(--grad-primary);">Save & Sync</button>
+        <button class="modal__btn modal__btn--cancel" id="btnDisconnectDb"
+          style="color:rgba(248, 113, 113, 0.8);border-color:rgba(248, 113, 113, 0.3);">Disconnect</button>
+        <button class="modal__btn modal__btn--primary" id="btnSaveDb" style="background:var(--grad-primary);">Save &
+          Sync</button>
       </div>
     </div>
   </div>
@@ -247,6 +246,43 @@
     }
   </script>
   <script src="app.js"></script>
+  <script>
+    (function () {
+      // Handle URL parameter for view
+      const params = new URLSearchParams(window.location.search);
+      const viewParam = params.get('view');
+      if (viewParam && window.switchView) {
+        setTimeout(() => window.switchView(viewParam), 100);
+      }
+
+      const dropdownBtn = document.getElementById('habitsDropdownBtn');
+      if (!dropdownBtn) return;
+      const dropdown = dropdownBtn.closest('.topnav__dropdown');
+      const dropdownItems = document.querySelectorAll('.topnav__dropdown-item');
+
+      dropdownBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        dropdown.classList.toggle('open');
+      });
+
+      document.addEventListener('click', function (e) {
+        if (!dropdown.contains(e.target)) {
+          dropdown.classList.remove('open');
+        }
+      });
+
+      dropdownItems.forEach(item => {
+        item.addEventListener('click', function (e) {
+          e.preventDefault();
+          const view = this.dataset.view;
+          document.querySelectorAll('.topnav__dropdown-item').forEach(i => i.classList.remove('active'));
+          this.classList.add('active');
+          dropdown.classList.remove('open');
+          if (window.switchView) window.switchView(view);
+        });
+      });
+    })();
+  </script>
 </body>
 
 </html>

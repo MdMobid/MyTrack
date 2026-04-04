@@ -310,6 +310,7 @@
       $$('.view-switcher__btn').forEach(btn => btn.classList.toggle('active', btn.dataset.view === view));
       renderCurrentView();
     }
+    window.switchView = switchView;
   
     function renderCurrentView() {
       const main = $('#mainContent');
