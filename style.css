@@ -1495,8 +1495,9 @@ h4 {
 }
 
 @media(max-width:640px) {
-  #app {
-    padding: 14px 14px 40px;
+  #app,
+  .app {
+    padding: 14px 14px calc(110px + env(safe-area-inset-bottom, 0px));
   }
 
   .header {
