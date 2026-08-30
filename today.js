@@ -58,7 +58,9 @@
       t.classList.add('toast--out');
       setTimeout(() => t.remove(), 250);
     }, dur);
-   /* ── PERSISTENCE & MERGE SYNC ── */
+  }
+
+  /* ── PERSISTENCE & MERGE SYNC ── */
   function saveHabits() {
     localStorage.setItem(HABITS_KEY, JSON.stringify({
       habits: habitState.habits,
@@ -102,7 +104,7 @@
           deletedHabitIds: habitState.deletedHabitIds
         }));
         if (window.db.isConfigured() && navigator.onLine) {
-          await window.db.saveDocument('mytrack_data', 'habits_state', merged).catch(() => {});
+          await window.db.saveDocument('mytrack_data', 'habits_state', merged).catch(() => { });
         }
         render();
       });
@@ -145,7 +147,7 @@
         localStorage.setItem(CATS_KEY, JSON.stringify(todoState.categories));
         localStorage.setItem('mytrack_todos_deleted', JSON.stringify(todoState.deletedTodoIds));
         if (window.db.isConfigured() && navigator.onLine) {
-          await window.db.saveDocument('mytrack_data', 'todos_state', merged).catch(() => {});
+          await window.db.saveDocument('mytrack_data', 'todos_state', merged).catch(() => { });
         }
         render();
       });
@@ -230,14 +232,14 @@
   function render() {
     const today = todayStr();
     const todayIdx = getDayOfWeek(today);
-    
+
     const pendingHabits = getTodayHabits();
     const allTodayHabits = habitState.habits.filter(h => !h.isPaused && h.days.includes(todayIdx));
     const completedHabits = allTodayHabits.filter(h => isHabitCompletedToday(h.id));
-    
+
     const pendingTodos = getTodayTodos();
     const completedTodos = todoState.todos.filter(t => t.done && t.due === today);
-    
+
     const totalCount = allTodayHabits.length + pendingTodos.length + completedTodos.length;
     const completedCount = completedHabits.length + completedTodos.length;
     const pendingCount = pendingHabits.length + pendingTodos.length;
@@ -432,6 +434,9 @@
       settingsModal.classList.add('open');
     });
     document.getElementById('settingsClose').addEventListener('click', () => settingsModal.classList.remove('open'));
+    settingsModal.addEventListener('click', (e) => {
+      if (e.target === settingsModal) settingsModal.classList.remove('open');
+    });
     document.getElementById('btnDisconnectDb').addEventListener('click', () => {
       window.db.clearConfig();
       settingsModal.classList.remove('open');
@@ -457,7 +462,7 @@
     // Export/Import handlers
     const btnExportData = document.getElementById('btnExportData');
     const btnImportData = document.getElementById('btnImportData');
-    
+
     if (btnExportData) {
       btnExportData.addEventListener('click', () => {
         const data = {
@@ -508,7 +513,7 @@
   }
 
   // Settings dropdown toggle
-  window.toggleSettingsDropdown = function(dropdownId) {
+  window.toggleSettingsDropdown = function (dropdownId) {
     const dropdown = document.getElementById(dropdownId);
     if (!dropdown) return;
     dropdown.classList.toggle('settings-dropdown--open');

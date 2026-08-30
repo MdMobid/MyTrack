@@ -91,17 +91,49 @@
 
   /* ── STATS ── */
   function updateStats() {
-    const today = todayStr();
-    const curMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
-    const monthExp = state.expenses.filter(e => e.date.startsWith(curMonth));
-    const todayExp = state.expenses.filter(e => e.date === today);
+    const now = new Date();
+    const isCurrentMonth = viewDate.year === now.getFullYear() && viewDate.month === now.getMonth();
+    const monthExp = monthExpenses();
     const total = monthExp.reduce((s, e) => s + Number(e.amount), 0);
-    const todayTotal = todayExp.reduce((s, e) => s + Number(e.amount), 0);
-    const days = new Date().getDate();
-    const avg = days > 0 ? total / days : 0;
+
+    // 1. Total spent for selected month
     $('#statSpent').textContent = fmtAmt(total);
-    $('#statToday').textContent = fmtAmt(todayTotal);
+    const spentLabel = $('#statSpentLabel');
+    if (spentLabel) {
+      spentLabel.textContent = isCurrentMonth ? 'This Month' : `${MONTH_NAMES[viewDate.month]} Total`;
+    }
+
+    // 2. Today vs Peak Expense
+    const statTodayVal = $('#statToday');
+    const statTodayLabel = $('#statTodayLabel');
+    const statTodayIcon = $('#statTodayIcon');
+
+    if (isCurrentMonth) {
+      const today = todayStr();
+      const todayExp = monthExp.filter(e => e.date === today);
+      const todayTotal = todayExp.reduce((s, e) => s + Number(e.amount), 0);
+      if (statTodayVal) statTodayVal.textContent = fmtAmt(todayTotal);
+      if (statTodayLabel) statTodayLabel.textContent = 'Today';
+      if (statTodayIcon) statTodayIcon.textContent = '📅';
+    } else {
+      // Find peak single expense in selected month
+      const peakExp = monthExp.reduce((max, e) => Math.max(max, Number(e.amount)), 0);
+      if (statTodayVal) statTodayVal.textContent = fmtAmt(peakExp);
+      if (statTodayLabel) statTodayLabel.textContent = 'Peak Expense';
+      if (statTodayIcon) statTodayIcon.textContent = '🏔️';
+    }
+
+    // 3. Daily Average
+    let daysToDivide;
+    if (isCurrentMonth) {
+      daysToDivide = now.getDate(); // Days elapsed so far in current month
+    } else {
+      daysToDivide = new Date(viewDate.year, viewDate.month + 1, 0).getDate(); // Total days in selected month
+    }
+    const avg = daysToDivide > 0 ? total / daysToDivide : 0;
     $('#statAvg').textContent = fmtAmt(avg);
+
+    // 4. Total transactions count in selected month
     $('#statCount').textContent = monthExp.length;
   }
 

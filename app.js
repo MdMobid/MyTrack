@@ -385,9 +385,8 @@
               <div class="habit-card__info">
                 <div class="habit-card__emoji">${habit.emoji}</div>
                 <div>
-                  <div class="habit-card__name" style="display:flex;align-items:center;gap:8px;">
-                    <span>${escapeHtml(habit.name)}</span>
-                    ${isPaused ? `<span class="habit-badge--paused">⏸️ Paused</span>` : ''}
+                  <div class="habit-card__name">
+                    ${escapeHtml(habit.name)}
                   </div>
                   <div class="habit-card__streak ${streak >= 3 ? 'on-fire' : ''}">
                     ${isPaused
@@ -398,11 +397,7 @@
                   </div>
                 </div>
               </div>
-              ${isPaused ? `
-                <button class="btn-resume-habit" onclick="window.__togglePauseHabit('${habit.id}')" title="Resume Habit">
-                  ▶️ Resume
-                </button>
-              ` : isActiveToday ? `
+              ${isPaused ? `<div class="habit-card__rest-icon">⏸️</div>` : isActiveToday ? `
                 <label class="habit-toggle">
                   <input type="checkbox" ${isDone ? 'checked' : ''}
                          onchange="window.__toggleHabit('${habit.id}', this.checked)">
@@ -517,7 +512,7 @@
       return `
                       <tr>
                         <td class="weekly-grid__habit-name">
-                          <span>${habit.emoji}</span> ${escapeHtml(habit.name)} ${habit.isPaused ? '<span class="habit-badge--paused" style="margin-left:4px;">Paused</span>' : ''}
+                          <span>${habit.emoji}</span> ${escapeHtml(habit.name)}
                         </td>
                         ${weekDates.map(wd => {
         const dayIdx = getDayOfWeek(wd);
@@ -884,6 +879,9 @@
         settingsModal.classList.add('open');
       });
       document.getElementById('settingsClose').addEventListener('click', () => settingsModal.classList.remove('open'));
+      settingsModal.addEventListener('click', (e) => {
+        if (e.target === settingsModal) settingsModal.classList.remove('open');
+      });
       document.getElementById('btnDisconnectDb').addEventListener('click', () => {
         window.db.clearConfig();
         settingsModal.classList.remove('open');
@@ -1120,7 +1118,11 @@
 
   // ── Keyboard Shortcuts ────────────────────────────────────
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeModal();
+    if (e.key === 'Escape') {
+      closeModal();
+      const sm = document.getElementById('settingsModal');
+      if (sm) sm.classList.remove('open');
+    }
     if (e.key === 'n' && !e.ctrlKey && !e.metaKey && document.activeElement.tagName !== 'INPUT') {
       e.preventDefault();
       openModal();
