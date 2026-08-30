@@ -17,7 +17,7 @@
     { name: 'Other', icon: '📦', color: '#94a3b8' },
   ];
 
-  let state = { expenses: [], categories: [...DEFAULT_CATEGORIES] };
+  let state = { expenses: [], categories: [...DEFAULT_CATEGORIES], deletedExpenseIds: [] };
   let viewDate = { year: new Date().getFullYear(), month: new Date().getMonth() };
   let editingId = null;
   let filterCat = 'all';
@@ -32,33 +32,52 @@
   const fmtDate = ds => { if (!ds) return ''; const d = new Date(ds + 'T00:00:00'); return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }); };
   const escHtml = s => { const d = document.createElement('div'); d.textContent = String(s || ''); return d.innerHTML; };
 
-  /* ── PERSISTENCE ── */
+  /* ── PERSISTENCE & MERGE SYNC ── */
   const save = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state.expenses));
     localStorage.setItem(STORAGE_KEY + '_cats', JSON.stringify(state.categories));
-    if (window.db) {
-      window.db.upsertDocument('mytrack_data', { _id: 'expenses_state' }, {
+    localStorage.setItem('mytrack_expenses_deleted', JSON.stringify(state.deletedExpenseIds || []));
+
+    if (window.db && window.db.isConfigured()) {
+      window.db.saveDocument('mytrack_data', 'expenses_state', {
         expenses: state.expenses,
-        categories: state.categories
-      });
+        categories: state.categories,
+        deletedExpenseIds: state.deletedExpenseIds || [],
+        lastSyncedAt: Date.now()
+      }).catch(e => console.warn('Expenses sync pending:', e));
     }
   };
+
   function load() {
     try { const r = localStorage.getItem(STORAGE_KEY); if (r) state.expenses = JSON.parse(r); } catch (e) { }
     try { const c = localStorage.getItem(STORAGE_KEY + '_cats'); if (c) state.categories = JSON.parse(c); } catch (e) { }
+    try { const d = localStorage.getItem('mytrack_expenses_deleted'); if (d) state.deletedExpenseIds = JSON.parse(d); } catch (e) { }
 
-    if (window.db && window.db.isConfigured()) {
-      window.db.fetchDocuments('mytrack_data').then(docs => {
-        if (!docs) return;
-        const remoteInfo = docs.find(d => d._id === 'expenses_state');
-        if (remoteInfo) {
-          if (remoteInfo.expenses) state.expenses = remoteInfo.expenses;
-          if (remoteInfo.categories) state.categories = remoteInfo.categories;
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(state.expenses));
-          localStorage.setItem(STORAGE_KEY + '_cats', JSON.stringify(state.categories));
-          render();
+    if (window.db) {
+      window.db.registerSyncHandler('expenses_state', async (remoteInfo) => {
+        if (!remoteInfo) return;
+        const merged = window.mergeExpensesState(
+          { expenses: state.expenses, categories: state.categories, deletedExpenseIds: state.deletedExpenseIds || [] },
+          remoteInfo
+        );
+
+        state.expenses = merged.expenses || [];
+        state.categories = merged.categories && merged.categories.length > 0 ? merged.categories : DEFAULT_CATEGORIES;
+        state.deletedExpenseIds = merged.deletedExpenseIds || [];
+
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state.expenses));
+        localStorage.setItem(STORAGE_KEY + '_cats', JSON.stringify(state.categories));
+        localStorage.setItem('mytrack_expenses_deleted', JSON.stringify(state.deletedExpenseIds));
+
+        if (window.db.isConfigured() && navigator.onLine) {
+          await window.db.saveDocument('mytrack_data', 'expenses_state', merged).catch(() => {});
         }
+        render();
       });
+
+      if (window.db.isConfigured() && navigator.onLine) {
+        window.db.triggerAllSync();
+      }
     }
   }
 
@@ -407,6 +426,7 @@
       date: $('#expDate').value || todayStr(),
       payment: $('#expPayment').value,
       notes: $('#expNotes').value.trim(),
+      updatedAt: Date.now(),
     };
     if (editingId) {
       const idx = state.expenses.findIndex(e => e.id === editingId);
@@ -432,6 +452,8 @@
 
   window.__deleteExp = id => {
     if (!confirm('Delete this expense?')) return;
+    if (!state.deletedExpenseIds) state.deletedExpenseIds = [];
+    state.deletedExpenseIds.push({ id, deletedAt: Date.now() });
     state.expenses = state.expenses.filter(e => e.id !== id);
     save(); render();
   };

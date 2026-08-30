@@ -5,7 +5,7 @@
 
   const DEFAULT_CATS = ['Personal', 'Work', 'Health', 'Shopping', 'Learning'];
 
-  let state = { todos: [], categories: [...DEFAULT_CATS] };
+  let state = { todos: [], categories: [...DEFAULT_CATS], deletedTodoIds: [] };
   let editingId = null;
   let modalSubtasks = [];
   let activeFilter = 'all';
@@ -24,39 +24,56 @@
   }
   function isOverdue(ds) { return ds && ds < todayStr(); }
 
-  /* ── PERSISTENCE ── */
+  /* ── PERSISTENCE & MERGE SYNC ── */
   function save() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state.todos));
     localStorage.setItem(CATS_KEY, JSON.stringify(state.categories));
+    localStorage.setItem('mytrack_todos_deleted', JSON.stringify(state.deletedTodoIds || []));
 
-    if (window.db) {
-      window.db.upsertDocument('mytrack_data', { _id: 'todos_state' }, {
+    if (window.db && window.db.isConfigured()) {
+      window.db.saveDocument('mytrack_data', 'todos_state', {
         todos: state.todos,
-        categories: state.categories
-      });
+        categories: state.categories,
+        deletedTodoIds: state.deletedTodoIds || [],
+        lastSyncedAt: Date.now()
+      }).catch(e => console.warn('Todos sync pending:', e));
     }
   }
+
   function load() {
     try {
       const t = localStorage.getItem(STORAGE_KEY);
       const c = localStorage.getItem(CATS_KEY);
+      const d = localStorage.getItem('mytrack_todos_deleted');
       if (t) state.todos = JSON.parse(t);
       if (c) state.categories = JSON.parse(c);
+      if (d) state.deletedTodoIds = JSON.parse(d);
     } catch (e) { }
 
-    if (window.db && window.db.isConfigured()) {
-      window.db.fetchDocuments('mytrack_data').then(docs => {
-        if (!docs) return;
-        const remoteInfo = docs.find(d => d._id === 'todos_state');
-        if (remoteInfo) {
-          state.todos = remoteInfo.todos || [];
-          state.categories = remoteInfo.categories || DEFAULT_CATS;
+    if (window.db) {
+      window.db.registerSyncHandler('todos_state', async (remoteInfo) => {
+        if (!remoteInfo) return;
+        const merged = window.mergeTodosState(
+          { todos: state.todos, categories: state.categories, deletedTodoIds: state.deletedTodoIds || [] },
+          remoteInfo
+        );
+        state.todos = merged.todos || [];
+        state.categories = merged.categories || DEFAULT_CATS;
+        state.deletedTodoIds = merged.deletedTodoIds || [];
 
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(state.todos));
-          localStorage.setItem(CATS_KEY, JSON.stringify(state.categories));
-          render();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state.todos));
+        localStorage.setItem(CATS_KEY, JSON.stringify(state.categories));
+        localStorage.setItem('mytrack_todos_deleted', JSON.stringify(state.deletedTodoIds));
+
+        if (window.db.isConfigured() && navigator.onLine) {
+          await window.db.saveDocument('mytrack_data', 'todos_state', merged).catch(() => {});
         }
+        render();
       });
+
+      if (window.db.isConfigured() && navigator.onLine) {
+        window.db.triggerAllSync();
+      }
     }
   }
 
@@ -176,12 +193,22 @@
   /* ── ACTIONS ── */
   window.__toggleTodo = id => {
     const t = state.todos.find(x => x.id === id);
-    if (t) { t.done = !t.done; save(); render(); }
+    if (t) {
+      t.done = !t.done;
+      t.updatedAt = Date.now();
+      save();
+      render();
+    }
   };
 
   window.__toggleSubtask = (tid, idx) => {
     const t = state.todos.find(x => x.id === tid);
-    if (t && t.subtasks[idx]) { t.subtasks[idx].done = !t.subtasks[idx].done; save(); render(); }
+    if (t && t.subtasks[idx]) {
+      t.subtasks[idx].done = !t.subtasks[idx].done;
+      t.updatedAt = Date.now();
+      save();
+      render();
+    }
   };
 
   window.__editTodo = id => {
@@ -201,8 +228,11 @@
 
   window.__deleteTodo = id => {
     if (!confirm('Delete this task?')) return;
+    if (!state.deletedTodoIds) state.deletedTodoIds = [];
+    state.deletedTodoIds.push({ id, deletedAt: Date.now() });
     state.todos = state.todos.filter(x => x.id !== id);
-    save(); render();
+    save();
+    render();
   };
 
   /* ── MODAL ── */
@@ -245,6 +275,7 @@
       subtasks: modalSubtasks.map(s => ({ ...s })),
       done: editingId ? (state.todos.find(x => x.id === editingId) || {}).done || false : false,
       createdAt: editingId ? (state.todos.find(x => x.id === editingId) || {}).createdAt || todayStr() : todayStr(),
+      updatedAt: Date.now(),
     };
 
     if (editingId) {

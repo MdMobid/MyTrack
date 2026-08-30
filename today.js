@@ -58,19 +58,20 @@
       t.classList.add('toast--out');
       setTimeout(() => t.remove(), 250);
     }, dur);
-  }
-
-  /* ── PERSISTENCE ── */
+   /* ── PERSISTENCE & MERGE SYNC ── */
   function saveHabits() {
     localStorage.setItem(HABITS_KEY, JSON.stringify({
       habits: habitState.habits,
-      completions: habitState.completions
+      completions: habitState.completions,
+      deletedHabitIds: habitState.deletedHabitIds || []
     }));
-    if (window.db) {
-      window.db.upsertDocument('mytrack_data', { _id: 'habits_state' }, {
+    if (window.db && window.db.isConfigured()) {
+      window.db.saveDocument('mytrack_data', 'habits_state', {
         habits: habitState.habits,
-        completions: habitState.completions
-      });
+        completions: habitState.completions,
+        deletedHabitIds: habitState.deletedHabitIds || [],
+        lastSyncedAt: Date.now()
+      }).catch(e => console.warn('Habits sync pending:', e));
     }
   }
 
@@ -81,21 +82,29 @@
         const data = JSON.parse(raw);
         habitState.habits = data.habits || [];
         habitState.completions = data.completions || {};
+        habitState.deletedHabitIds = data.deletedHabitIds || [];
       }
     } catch (e) { }
 
-    if (window.db && window.db.isConfigured()) {
-      window.db.fetchDocuments('mytrack_data').then(docs => {
-        if (!docs) return;
-        const remote = docs.find(d => d._id === 'habits_state');
-        if (remote) {
-          habitState.habits = remote.habits || [];
-          habitState.completions = remote.completions || {};
-          localStorage.setItem(HABITS_KEY, JSON.stringify({
-            habits: habitState.habits,
-            completions: habitState.completions
-          }));
+    if (window.db) {
+      window.db.registerSyncHandler('habits_state', async (remote) => {
+        if (!remote) return;
+        const merged = window.mergeHabitsState(
+          { habits: habitState.habits, completions: habitState.completions, deletedHabitIds: habitState.deletedHabitIds || [] },
+          remote
+        );
+        habitState.habits = merged.habits || [];
+        habitState.completions = merged.completions || {};
+        habitState.deletedHabitIds = merged.deletedHabitIds || [];
+        localStorage.setItem(HABITS_KEY, JSON.stringify({
+          habits: habitState.habits,
+          completions: habitState.completions,
+          deletedHabitIds: habitState.deletedHabitIds
+        }));
+        if (window.db.isConfigured() && navigator.onLine) {
+          await window.db.saveDocument('mytrack_data', 'habits_state', merged).catch(() => {});
         }
+        render();
       });
     }
   }
@@ -103,11 +112,13 @@
   function saveTodos() {
     localStorage.setItem(TODOS_KEY, JSON.stringify(todoState.todos));
     localStorage.setItem(CATS_KEY, JSON.stringify(todoState.categories));
-    if (window.db) {
-      window.db.upsertDocument('mytrack_data', { _id: 'todos_state' }, {
+    if (window.db && window.db.isConfigured()) {
+      window.db.saveDocument('mytrack_data', 'todos_state', {
         todos: todoState.todos,
-        categories: todoState.categories
-      });
+        categories: todoState.categories,
+        deletedTodoIds: todoState.deletedTodoIds || [],
+        lastSyncedAt: Date.now()
+      }).catch(e => console.warn('Todos sync pending:', e));
     }
   }
 
@@ -117,18 +128,26 @@
       const c = localStorage.getItem(CATS_KEY);
       if (t) todoState.todos = JSON.parse(t);
       if (c) todoState.categories = JSON.parse(c);
+      todoState.deletedTodoIds = JSON.parse(localStorage.getItem('mytrack_todos_deleted') || '[]');
     } catch (e) { }
 
-    if (window.db && window.db.isConfigured()) {
-      window.db.fetchDocuments('mytrack_data').then(docs => {
-        if (!docs) return;
-        const remote = docs.find(d => d._id === 'todos_state');
-        if (remote) {
-          todoState.todos = remote.todos || [];
-          todoState.categories = remote.categories || [];
-          localStorage.setItem(TODOS_KEY, JSON.stringify(todoState.todos));
-          localStorage.setItem(CATS_KEY, JSON.stringify(todoState.categories));
+    if (window.db) {
+      window.db.registerSyncHandler('todos_state', async (remote) => {
+        if (!remote) return;
+        const merged = window.mergeTodosState(
+          { todos: todoState.todos, categories: todoState.categories, deletedTodoIds: todoState.deletedTodoIds || [] },
+          remote
+        );
+        todoState.todos = merged.todos || [];
+        todoState.categories = merged.categories || [];
+        todoState.deletedTodoIds = merged.deletedTodoIds || [];
+        localStorage.setItem(TODOS_KEY, JSON.stringify(todoState.todos));
+        localStorage.setItem(CATS_KEY, JSON.stringify(todoState.categories));
+        localStorage.setItem('mytrack_todos_deleted', JSON.stringify(todoState.deletedTodoIds));
+        if (window.db.isConfigured() && navigator.onLine) {
+          await window.db.saveDocument('mytrack_data', 'todos_state', merged).catch(() => {});
         }
+        render();
       });
     }
   }
@@ -137,7 +156,7 @@
   function getTodayHabits() {
     const todayIdx = getDayOfWeek(todayStr());
     const today = todayStr();
-    return habitState.habits.filter(h => h.days.includes(todayIdx) && !(habitState.completions[today] && habitState.completions[today][h.id]));
+    return habitState.habits.filter(h => !h.isPaused && h.days.includes(todayIdx) && !(habitState.completions[today] && habitState.completions[today][h.id]));
   }
 
   function isHabitCompletedToday(habitId) {
@@ -156,8 +175,13 @@
     if (!habit) return 0;
 
     const d = new Date();
+    if (habit.isPaused && habit.pausedAt) {
+      const pDate = new Date(habit.pausedAt + 'T00:00:00');
+      if (pDate <= d) d.setTime(pDate.getTime());
+    }
+
     const todayComp = habitState.completions[todayStr()] || {};
-    if (!todayComp[habitId]) {
+    if (!habit.isPaused && !todayComp[habitId]) {
       d.setDate(d.getDate() - 1);
     }
 
@@ -195,6 +219,7 @@
     const todo = todoState.todos.find(t => t.id === todoId);
     if (todo) {
       todo.done = !todo.done;
+      todo.updatedAt = Date.now();
       saveTodos();
       render();
       showToast(todo.done ? 'Task completed!' : 'Task reopened', 'success');
@@ -207,7 +232,7 @@
     const todayIdx = getDayOfWeek(today);
     
     const pendingHabits = getTodayHabits();
-    const allTodayHabits = habitState.habits.filter(h => h.days.includes(todayIdx));
+    const allTodayHabits = habitState.habits.filter(h => !h.isPaused && h.days.includes(todayIdx));
     const completedHabits = allTodayHabits.filter(h => isHabitCompletedToday(h.id));
     
     const pendingTodos = getTodayTodos();
@@ -287,7 +312,6 @@
     function renderTaskCard(task) {
       const overdue = task.due && task.due < today;
       const priorityColor = task.priority === 'high' ? '#f87171' : task.priority === 'medium' ? '#fbbf24' : '#34d399';
-      const priorityLabel = (task.priority || 'medium').charAt(0).toUpperCase() + (task.priority || 'medium').slice(1);
       return `
         <div class="habit-card completed-${task.done}" style="--habit-color: linear-gradient(135deg, ${priorityColor}, ${priorityColor}88);"
              data-task-id="${task.id}" id="task-card-${task.id}">
@@ -343,7 +367,7 @@
       </div>
     `;
 
-    if (completedCount > 0 && completedCount === allTodayHabits.length + allTodayTodos.length && allTodayTodos.length > 0) {
+    if (completedCount > 0 && completedCount === allTodayHabits.length + pendingTodos.length + completedTodos.length) {
       setTimeout(() => showConfetti(), 400);
     }
   }
@@ -380,13 +404,14 @@
     }
     saveHabits();
     render();
-    showToast('Habit completed!', 'success');
+    showToast(checked ? 'Habit completed!' : 'Habit unchecked', 'success');
   };
 
   window.__toggleTodo = (id, checked) => {
     const todo = todoState.todos.find(t => t.id === id);
     if (todo) {
       todo.done = checked;
+      todo.updatedAt = Date.now();
       saveTodos();
       render();
       showToast(checked ? 'Task completed!' : 'Task reopened', 'success');
@@ -420,9 +445,7 @@
 
       if (!url) return showToast('Please enter Firebase DB URL', 'error');
 
-      const newConfig = { url, key, fcmConfig: fcmCfg, vapidKey: vapid };
-      localStorage.setItem('mytrack_db_config', JSON.stringify(newConfig));
-      window.db.config = newConfig;
+      window.db.saveConfig(url, key, fcmCfg, vapid);
 
       settingsModal.classList.remove('open');
       showToast('Sync settings saved!', 'success');
@@ -449,7 +472,7 @@
         a.href = downloadUrl;
         a.download = `mytrack-backup-${new Date().toISOString().split('T')[0]}.json`;
         a.click();
-        URL.revokeObjectURL(url);
+        URL.revokeObjectURL(downloadUrl);
         showToast('Data exported successfully!', 'success');
       });
     }
