@@ -107,14 +107,19 @@
     return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
   }
 
-  function isHabitActiveOnDay(habit, dayIndex) {
-    if (habit.isPaused) return false;
+  function isHabitActiveOnDay(habit, dayIndex, ds) {
+    if (habit.isPaused) {
+      if (ds && habit.pausedAt && ds < habit.pausedAt) {
+        return habit.days.includes(dayIndex);
+      }
+      return false;
+    }
     return habit.days.includes(dayIndex);
   }
 
   function getActiveHabitsForDate(ds) {
     const dayIndex = getDayOfWeek(ds);
-    return state.habits.filter(h => isHabitActiveOnDay(h, dayIndex));
+    return state.habits.filter(h => isHabitActiveOnDay(h, dayIndex, ds));
   }
 
   // ── Emoji Helpers ─────────────────────────────────────────
@@ -546,20 +551,21 @@
                         </td>
                         ${weekDates.map(wd => {
         const dayIdx = getDayOfWeek(wd);
-        const isActive = isHabitActiveOnDay(habit, dayIdx);
+        const isActive = isHabitActiveOnDay(habit, dayIdx, wd);
         const isToday = wd === today;
         const isFuture = wd > today;
-        const isDone = isActive && (state.completions[wd] || {})[habit.id];
+        const isDone = !!(state.completions[wd] || {})[habit.id];
+        const isPausedOnDay = habit.isPaused && (!habit.pausedAt || wd >= habit.pausedAt);
         let cellClass = 'weekly-cell';
         if (isToday) cellClass += ' today-cell';
         if (isFuture) cellClass += ' future';
-        if (habit.isPaused) cellClass += ' missed';
+        if (isDone) cellClass += ' done';
+        else if (isPausedOnDay) cellClass += ' missed';
         else if (!isActive) cellClass += ' missed';
-        else if (isDone) cellClass += ' done';
 
         return `<td><div class="${cellClass}" data-date="${wd}" data-habit="${habit.id}" 
                                                     ${isActive && !isFuture ? `onclick="window.__toggleWeekly('${habit.id}','${wd}')"` : ''}>
-                                                    ${isDone ? '✓' : habit.isPaused ? '⏸' : isActive ? '' : '·'}
+                                                    ${isDone ? '✓' : isPausedOnDay ? '⏸' : isActive ? '' : '·'}
                                                   </div></td>`;
       }).join('')}
                       </tr>
@@ -620,8 +626,11 @@
       const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
       const active = getActiveHabitsForDate(ds);
       const comps = state.completions[ds] || {};
-      const done = active.filter(h => comps[h.id]).length;
-      const total = active.length;
+      const activeIds = new Set(active.map(h => h.id));
+      const extraCompletedHabits = state.habits.filter(h => comps[h.id] && !activeIds.has(h.id));
+      const effectiveActive = [...active, ...extraCompletedHabits];
+      const done = effectiveActive.filter(h => comps[h.id]).length;
+      const total = effectiveActive.length;
       const pct = total > 0 ? Math.round((done / total) * 100) : -1;
       let level = 0;
       if (pct >= 0) {
@@ -641,9 +650,13 @@
         const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
         if (ds > today) continue;
         const dayIdx = getDayOfWeek(ds);
-        if (habit.days.includes(dayIdx)) {
+        const isActive = isHabitActiveOnDay(habit, dayIdx, ds);
+        const isDone = !!(state.completions[ds] || {})[habit.id];
+
+        // Paused or unscheduled days do not count as required active days unless completed
+        if (isActive || isDone) {
           totalActive++;
-          if ((state.completions[ds] || {})[habit.id]) totalDone++;
+          if (isDone) totalDone++;
         }
       }
       const pct = totalActive > 0 ? Math.round((totalDone / totalActive) * 100) : 0;
@@ -719,21 +732,24 @@
                 <div class="monthly-breakdown">
                   <div class="monthly-breakdown__title">Habit Breakdown</div>
                   <div class="monthly-analytics">
-                    ${habitStats.map(hs => `
+                    ${habitStats.map(hs => {
+                      const isFullyPaused = hs.habit.isPaused && hs.totalActive === 0;
+                      return `
                       <div class="habit-analytics-card">
                         <div class="habit-analytics-card__header">
                           <span class="habit-analytics-card__emoji">${hs.habit.emoji}</span>
                           <span class="habit-analytics-card__name">${escapeHtml(hs.habit.name)} ${hs.habit.isPaused ? '<span class="habit-badge--paused" style="margin-left:4px;">Paused</span>' : ''}</span>
-                          <span class="habit-analytics-card__pct">${hs.pct}%</span>
+                          <span class="habit-analytics-card__pct">${isFullyPaused ? '—' : `${hs.pct}%`}</span>
                         </div>
                         <div class="habit-analytics-card__bar">
-                          <div class="habit-analytics-card__bar-fill" style="width:${hs.pct}%;background:${hs.color.gradient}"></div>
+                          <div class="habit-analytics-card__bar-fill" style="width:${isFullyPaused ? 0 : hs.pct}%;background:${hs.color.gradient}"></div>
                         </div>
                         <div class="habit-analytics-card__stats">
-                          <span>${hs.totalDone} / ${hs.totalActive} days completed</span>
+                          <span>${isFullyPaused ? 'Paused (excluded from score)' : `${hs.totalDone} / ${hs.totalActive} days completed${hs.habit.isPaused ? ' (Paused)' : ''}`}</span>
                         </div>
                       </div>
-                    `).join('')}
+                    `;
+                    }).join('')}
                   </div>
                 </div>
               </div>
