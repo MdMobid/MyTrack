@@ -858,6 +858,47 @@ h4 {
   font-size: 1.15rem;
   font-weight: 700;
   color: var(--t1);
+  display: inline-flex;
+  align-items: center;
+}
+
+.week-nav {
+  margin-bottom: 20px;
+}
+
+.week-nav__badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 3px 8px;
+  border-radius: 20px;
+  background: var(--cyan-dim);
+  color: var(--cyan);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  margin-left: 10px;
+}
+
+.week-nav__reset-btn {
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 6px 14px;
+  border-radius: var(--r-xs);
+  border: 1px solid rgba(0, 212, 255, 0.35);
+  background: var(--bg-raised);
+  color: var(--cyan);
+  cursor: pointer;
+  box-shadow: var(--neu-out-xs);
+  transition: all 0.2s var(--ease);
+}
+
+.week-nav__reset-btn:hover {
+  background: var(--cyan);
+  color: #0e1324;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px var(--cyan-glow);
 }
 
 /* Two-column monthly layout */
@@ -1495,6 +1536,7 @@ h4 {
 }
 
 @media(max-width:640px) {
+
   #app,
   .app {
     padding: 14px 14px calc(110px + env(safe-area-inset-bottom, 0px));
@@ -1561,7 +1603,7 @@ h4 {
   .monthly-left {
     flex-direction: column;
   }
-  
+
   /* Card text overflow for mobile */
   .habit-card__name {
     max-width: 180px;
@@ -1569,17 +1611,17 @@ h4 {
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  
+
   /* Touch-friendly checkbox */
   .habit-toggle {
     padding: 8px;
   }
-  
+
   .habit-toggle__visual {
     width: 28px;
     height: 28px;
   }
-  
+
   /* Filter buttons */
   .filter-group {
     flex-wrap: wrap;
@@ -1771,16 +1813,16 @@ h4 {
   background-color: var(--t3);
   transition: 0.3s var(--spring);
   border-radius: 50%;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
 }
 
-input:checked + .slider {
+input:checked+.slider {
   background: linear-gradient(135deg, #f59e0b, #d97706);
   border-color: rgba(245, 158, 11, 0.4);
   box-shadow: 0 0 12px rgba(245, 158, 11, 0.3);
 }
 
-input:checked + .slider:before {
+input:checked+.slider:before {
   transform: translateX(20px);
   background-color: #fff;
-}
+}

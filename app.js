@@ -11,6 +11,7 @@
   const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const DAY_NAMES_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   const COLORS = [
     { name: 'Cyan', value: '#00d4ff', gradient: 'linear-gradient(135deg, #00d4ff, #0099cc)' },
@@ -44,6 +45,7 @@
     deletedHabitIds: [], // [ { id, deletedAt } ] for tombstone sync
     currentView: 'daily',
     monthlyViewDate: null, // { year, month } for monthly nav
+    weeklyViewOffset: 0,   // 0 for current week, -1 for previous week, etc.
   };
 
   let editingHabitId = null;
@@ -65,8 +67,9 @@
     return new Date(dateString + 'T00:00:00').getDay();
   }
 
-  function getWeekDates() {
+  function getWeekDates(offsetWeeks = 0) {
     const today = new Date();
+    today.setDate(today.getDate() + (offsetWeeks * 7));
     const dayOfWeek = today.getDay();
     const dates = [];
     for (let i = 0; i < 7; i++) {
@@ -472,9 +475,24 @@
 
   // ── Weekly View ───────────────────────────────────────────
   function renderWeeklyView(container) {
-    const weekDates = getWeekDates();
+    if (state.weeklyViewOffset === undefined) state.weeklyViewOffset = 0;
+    const offset = state.weeklyViewOffset;
+    const weekDates = getWeekDates(offset);
     const today = todayStr();
     const habits = state.habits;
+
+    const startDate = new Date(weekDates[0] + 'T00:00:00');
+    const endDate = new Date(weekDates[6] + 'T00:00:00');
+    let weekTitle = '';
+    if (startDate.getFullYear() === endDate.getFullYear()) {
+      if (startDate.getMonth() === endDate.getMonth()) {
+        weekTitle = `${MONTH_SHORT[startDate.getMonth()]} ${startDate.getDate()} – ${endDate.getDate()}, ${startDate.getFullYear()}`;
+      } else {
+        weekTitle = `${MONTH_SHORT[startDate.getMonth()]} ${startDate.getDate()} – ${MONTH_SHORT[endDate.getMonth()]} ${endDate.getDate()}, ${startDate.getFullYear()}`;
+      }
+    } else {
+      weekTitle = `${MONTH_SHORT[startDate.getMonth()]} ${startDate.getDate()}, ${startDate.getFullYear()} – ${MONTH_SHORT[endDate.getMonth()]} ${endDate.getDate()}, ${endDate.getFullYear()}`;
+    }
 
     const barData = weekDates.map(wd => {
       const active = getActiveHabitsForDate(wd);
@@ -486,6 +504,13 @@
 
     const html = `
         <div class="view-container weekly-view">
+          <div class="month-nav week-nav">
+            <button class="month-nav__btn" onclick="window.__weekNav(-1)" title="Previous Week">◀</button>
+            <h2 class="month-nav__title">${weekTitle} ${offset === 0 ? '<span class="week-nav__badge">This Week</span>' : ''}</h2>
+            <button class="month-nav__btn" onclick="window.__weekNav(1)" title="Next Week">▶</button>
+            ${offset !== 0 ? `<button class="week-nav__reset-btn" onclick="window.__weekNav(0, true)" title="Jump to Current Week">This Week</button>` : ''}
+          </div>
+
           ${habits.length === 0 ? `
             <div class="empty-state">
               <div class="empty-state__icon">📊</div>
@@ -761,6 +786,16 @@
     if (!state.completions[dateStr]) state.completions[dateStr] = {};
     state.completions[dateStr][habitId] = !state.completions[dateStr][habitId];
     saveState();
+    renderCurrentView();
+  };
+
+  // ── Week Navigation ───────────────────────────────────────
+  window.__weekNav = function (dir, reset = false) {
+    if (reset) {
+      state.weeklyViewOffset = 0;
+    } else {
+      state.weeklyViewOffset = (state.weeklyViewOffset || 0) + dir;
+    }
     renderCurrentView();
   };
 

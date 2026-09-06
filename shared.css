@@ -158,15 +158,68 @@ h4 {
 }
 
 .topnav__logo {
-  width: 40px;
-  height: 40px;
-  background: var(--bg);
+  width: 42px;
+  height: 42px;
+  background: linear-gradient(135deg, rgba(37, 42, 63, 0.95), rgba(24, 28, 46, 0.95));
   border-radius: var(--r-sm);
-  box-shadow: var(--neu-out-sm);
+  box-shadow: var(--neu-out-sm), inset 0 1px 1px rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.07);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s var(--ease);
+  flex-shrink: 0;
+}
+
+.topnav__logo::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at 70% 30%, rgba(0, 212, 255, 0.18), transparent 70%);
+  opacity: 0.8;
+  pointer-events: none;
+  transition: opacity 0.3s var(--ease);
+}
+
+.topnav__brand:hover .topnav__logo {
+  transform: translateY(-2px);
+  border-color: rgba(0, 212, 255, 0.4);
+  box-shadow: 
+    0 8px 24px -4px rgba(0, 212, 255, 0.3),
+    0 2px 10px rgba(124, 58, 237, 0.2),
+    var(--neu-out-sm);
+}
+
+.topnav__brand:hover .topnav__logo::before {
+  opacity: 1;
+}
+
+.topnav__logo-icon {
+  width: 28px;
+  height: 28px;
+  display: block;
+  transition: transform 0.4s var(--spring);
+}
+
+.topnav__logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.18);
+  display: block;
+  transition: transform 0.4s var(--spring);
+  border-radius: inherit;
+}
+
+.topnav__brand:hover .topnav__logo-icon {
+  transform: scale(1.08);
+}
+
+.topnav__brand:hover .topnav__logo-img {
+  transform: scale(1.28);
 }
 
 .topnav__name {
