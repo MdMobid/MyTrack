@@ -866,41 +866,6 @@ h4 {
   margin-bottom: 20px;
 }
 
-.week-nav__badge {
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding: 3px 8px;
-  border-radius: 20px;
-  background: var(--cyan-dim);
-  color: var(--cyan);
-  border: 1px solid rgba(0, 212, 255, 0.3);
-  margin-left: 10px;
-}
-
-.week-nav__reset-btn {
-  font-family: inherit;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  padding: 6px 14px;
-  border-radius: var(--r-xs);
-  border: 1px solid rgba(0, 212, 255, 0.35);
-  background: var(--bg-raised);
-  color: var(--cyan);
-  cursor: pointer;
-  box-shadow: var(--neu-out-xs);
-  transition: all 0.2s var(--ease);
-}
-
-.week-nav__reset-btn:hover {
-  background: var(--cyan);
-  color: #0e1324;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 14px var(--cyan-glow);
-}
-
 /* Two-column monthly layout */
 .monthly-layout {
   display: grid;

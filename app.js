@@ -335,6 +335,12 @@
   // ── View Switching ────────────────────────────────────────
   function switchView(view) {
     state.currentView = view;
+    if (view === 'weekly') {
+      state.weeklyViewOffset = 0;
+    } else if (view === 'monthly') {
+      const now = new Date();
+      state.monthlyViewDate = { year: now.getFullYear(), month: now.getMonth() };
+    }
     $$('.view-switcher__btn').forEach(btn => btn.classList.toggle('active', btn.dataset.view === view));
     renderCurrentView();
   }
@@ -506,9 +512,8 @@
         <div class="view-container weekly-view">
           <div class="month-nav week-nav">
             <button class="month-nav__btn" onclick="window.__weekNav(-1)" title="Previous Week">◀</button>
-            <h2 class="month-nav__title">${weekTitle} ${offset === 0 ? '<span class="week-nav__badge">This Week</span>' : ''}</h2>
+            <h2 class="month-nav__title">${weekTitle}</h2>
             <button class="month-nav__btn" onclick="window.__weekNav(1)" title="Next Week">▶</button>
-            ${offset !== 0 ? `<button class="week-nav__reset-btn" onclick="window.__weekNav(0, true)" title="Jump to Current Week">This Week</button>` : ''}
           </div>
 
           ${habits.length === 0 ? `
@@ -790,12 +795,8 @@
   };
 
   // ── Week Navigation ───────────────────────────────────────
-  window.__weekNav = function (dir, reset = false) {
-    if (reset) {
-      state.weeklyViewOffset = 0;
-    } else {
-      state.weeklyViewOffset = (state.weeklyViewOffset || 0) + dir;
-    }
+  window.__weekNav = function (dir) {
+    state.weeklyViewOffset = (state.weeklyViewOffset || 0) + dir;
     renderCurrentView();
   };
 
