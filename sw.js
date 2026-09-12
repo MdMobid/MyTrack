@@ -1,16 +1,20 @@
-const CACHE_NAME = 'mytrack-v1.0';
+const CACHE_NAME = 'mytrack-v1.9';
 const ASSETS = [
   './',
   './index.html',
+  './habits.html',
   './todos.html',
   './expenses.html',
+  './logs.html',
   './style.css',
   './shared.css',
   './todos.css',
   './expenses.css',
+  './logs.css',
   './app.js',
   './todos.js',
   './expenses.js',
+  './logs.js',
   './db.js',
   './icon-192.png',
   './icon-512.png',

@@ -429,9 +429,76 @@ function mergeExpensesState(local, remote) {
   };
 }
 
+/**
+ * Merge two log states (local and remote)
+ */
+function mergeLogsState(local, remote) {
+  if (!remote) return local;
+  if (!local) return remote;
+
+  const localLogs = Array.isArray(local.logs) ? local.logs : [];
+  const remoteLogs = Array.isArray(remote.logs) ? remote.logs : [];
+  const localDeletions = Array.isArray(local.deletedLogIds) ? local.deletedLogIds : [];
+  const remoteDeletions = Array.isArray(remote.deletedLogIds) ? remote.deletedLogIds : [];
+
+  const allDeletedMap = new Map();
+  localDeletions.forEach(d => {
+    if (typeof d === 'string') allDeletedMap.set(d, 0);
+    else if (d && d.id) allDeletedMap.set(d.id, d.deletedAt || 0);
+  });
+  remoteDeletions.forEach(d => {
+    if (typeof d === 'string') {
+      if (!allDeletedMap.has(d)) allDeletedMap.set(d, 0);
+    } else if (d && d.id) {
+      const existing = allDeletedMap.get(d.id) || 0;
+      allDeletedMap.set(d.id, Math.max(existing, d.deletedAt || 0));
+    }
+  });
+
+  const logsMap = new Map();
+  remoteLogs.forEach(l => { if (l && l.id) logsMap.set(l.id, { ...l }); });
+
+  localLogs.forEach(localL => {
+    if (!localL || !localL.id) return;
+    const remoteL = logsMap.get(localL.id);
+    if (!remoteL) {
+      const deletedAt = allDeletedMap.get(localL.id);
+      const localUpdated = localL.updatedAt || localL.createdAt || 0;
+      if (deletedAt && deletedAt > localUpdated) return;
+      logsMap.set(localL.id, { ...localL });
+    } else {
+      const localUpdated = localL.updatedAt || localL.createdAt || 0;
+      const remoteUpdated = remoteL.updatedAt || remoteL.createdAt || 0;
+      if (localUpdated >= remoteUpdated) {
+        logsMap.set(localL.id, { ...remoteL, ...localL });
+      } else {
+        logsMap.set(localL.id, { ...localL, ...remoteL });
+      }
+    }
+  });
+
+  const mergedLogs = [];
+  for (const [id, log] of logsMap.entries()) {
+    const deletedAt = allDeletedMap.get(id);
+    if (deletedAt && deletedAt >= (log.updatedAt || log.createdAt || 0)) continue;
+    mergedLogs.push(log);
+  }
+
+  mergedLogs.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+
+  const mergedDeletedArray = Array.from(allDeletedMap.entries()).map(([id, deletedAt]) => ({ id, deletedAt }));
+
+  return {
+    logs: mergedLogs,
+    deletedLogIds: mergedDeletedArray,
+    lastSyncedAt: Date.now()
+  };
+}
+
 // Global instance
 window.db = new DataAPI();
 window.mergeHabitsState = mergeHabitsState;
 window.mergeTodosState = mergeTodosState;
 window.mergeExpensesState = mergeExpensesState;
+window.mergeLogsState = mergeLogsState;
 

@@ -460,8 +460,7 @@
               <div class="empty-state__icon">🎯</div>
               <h3 class="empty-state__title">No habits yet</h3>
               <p class="empty-state__text">Add your first habit to start building powerful daily routines!</p>
-              <button class="btn-add-habit" onclick="document.getElementById('btnAddHabit').click()">＋ Create a Habit</button>
-            </div>
+              </div>
           ` : `
             <div class="habits-grid">
               ${incompleteFirst.map(h => renderHabitCard(h, true, false)).join('')}
@@ -525,8 +524,6 @@
             <div class="empty-state">
               <div class="empty-state__icon">📊</div>
               <h3 class="empty-state__title">No habits yet</h3>
-              <p class="empty-state__text">Create habits to see your weekly progress here!</p>
-              <button class="btn-add-habit" onclick="document.getElementById('btnAddHabit').click()">＋ Create a Habit</button>
             </div>
           ` : `
             <div class="weekly-grid">
@@ -682,7 +679,6 @@
               <div class="empty-state__icon">🗓️</div>
               <h3 class="empty-state__title">Nothing to show</h3>
               <p class="empty-state__text">Create habits and start tracking to see your monthly heatmap!</p>
-              <button class="btn-add-habit" onclick="document.getElementById('btnAddHabit').click()">＋ Create a Habit</button>
             </div>
           ` : `
             <div class="monthly-layout">
@@ -733,8 +729,8 @@
                   <div class="monthly-breakdown__title">Habit Breakdown</div>
                   <div class="monthly-analytics">
                     ${habitStats.map(hs => {
-                      const isFullyPaused = hs.habit.isPaused && hs.totalActive === 0;
-                      return `
+      const isFullyPaused = hs.habit.isPaused && hs.totalActive === 0;
+      return `
                       <div class="habit-analytics-card">
                         <div class="habit-analytics-card__header">
                           <span class="habit-analytics-card__emoji">${hs.habit.emoji}</span>
@@ -749,7 +745,7 @@
                         </div>
                       </div>
                     `;
-                    }).join('')}
+    }).join('')}
                   </div>
                 </div>
               </div>

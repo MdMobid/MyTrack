@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MyTrack — Logs</title>
+  <link rel="stylesheet" href="shared.css?v=1.9">
+  <link rel="stylesheet" href="logs.css?v=1.9">
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="apple-touch-icon" href="icon-192.png">
+</head>
+
+<body>
+  <div id="app" class="app">
+
+    <!-- TOP NAVIGATION -->
+    <nav class="topnav">
+      <a href="index.html" class="topnav__brand">
+        <div class="topnav__logo" aria-label="MyTrack Logo">
+          <img src="icon-192.png" alt="MyTrack" class="topnav__logo-img">
+        </div>
+        <div>
+          <div class="topnav__name">MyTrack</div>
+          <div class="topnav__tagline">Personal Dashboard</div>
+        </div>
+      </a>
+      <div class="topnav__links">
+        <a href="index.html" class="topnav__link"><span class="topnav__link-icon">📅</span><span>Today</span></a>
+        <a href="habits.html" class="topnav__link"><span class="topnav__link-icon">🎯</span><span>Habits</span></a>
+        <a href="todos.html" class="topnav__link"><span class="topnav__link-icon">✅</span><span>Todos</span></a>
+        <a href="expenses.html" class="topnav__link"><span class="topnav__link-icon">💰</span><span>Expenses</span></a>
+        <a href="logs.html" class="topnav__link active"><span class="topnav__link-icon">📝</span><span>Logs</span></a>
+      </div>
+      <button class="btn-primary" id="btnAddLog" style="background:var(--grad-primary);box-shadow:0 4px 18px var(--cyan-dim);">
+        <span style="font-size:1.1rem;font-weight:300">＋</span><span class="btn-text"> New Log</span>
+      </button>
+    </nav>
+
+    <!-- LOGS CONTAINER -->
+    <div class="logs-wrapper">
+
+      <!-- TOOLBAR / SEARCH -->
+      <div class="logs-toolbar">
+        <div class="logs-search">
+          <span class="logs-search__icon">🔍</span>
+          <input type="text" id="logSearchInput" class="logs-search__input" placeholder="Search logs...">
+          <button id="logSearchClear" class="logs-search__clear" title="Clear search" style="display:none;">✕</button>
+        </div>
+        <div class="logs-hint">
+          <span class="logs-hint__icon">👈</span>
+          <span class="logs-hint__text">Swipe left to reveal time · Hold log for options</span>
+        </div>
+      </div>
+
+      <!-- LOG STREAM (INTERACTIVE SWIPE / DRAG AREA) -->
+      <main id="logsFeed" class="logs-feed" aria-label="Log Stream">
+        <!-- Day groups & log items rendered dynamically here -->
+      </main>
+
+    </div>
+
+  </div>
+
+  <!-- TOAST CONTAINER -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ADD / EDIT LOG MODAL -->
+  <div class="modal-overlay" id="logModal">
+    <div class="modal" style="max-width: 520px;">
+      <button class="modal__close" id="logModalClose">✕</button>
+      <h2 class="modal__title" id="logModalTitle">New Log</h2>
+      <div class="modal__field" style="margin-top: 14px;">
+        <label class="modal__label">What's on your mind?</label>
+        <textarea class="modal__input" id="modalLogText" rows="4"
+          placeholder="Write a log, reflection, or note..."
+          style="resize: vertical; min-height: 100px; font-size: 0.95rem; line-height: 1.5;"></textarea>
+      </div>
+      <div class="modal__actions" style="margin-top: 20px;">
+        <button class="modal__btn modal__btn--cancel" id="btnCancelLog">Cancel</button>
+        <button class="modal__btn modal__btn--primary" id="btnSaveLog" style="background:var(--grad-primary);">Save Log</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPTS -->
+  <script src="db.js"></script>
+  <script src="logs.js?v=1.9"></script>
+</body>
+
+</html>
