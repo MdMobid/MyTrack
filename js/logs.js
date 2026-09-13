@@ -12,8 +12,14 @@
   };
 
   let searchQuery = '';
-  let currentFilter = 'all';
   let editingLogId = null;
+
+  /* ── DATE FILTER STATE ── */
+  let dateFilter = {
+    from: '',
+    to: '',
+    preset: 'all' // 'today' | 'yesterday' | 'week' | 'all' | 'custom'
+  };
 
   /* ── DOM SELECTORS ── */
   const $ = s => document.querySelector(s);
@@ -36,6 +42,15 @@
     const d = new Date();
     d.setDate(d.getDate() - 1);
     return dateStr(d);
+  }
+
+  function weekStartStr() {
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    const day = startOfWeek.getDay();
+    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1); // Monday
+    startOfWeek.setDate(diff);
+    return dateStr(startOfWeek);
   }
 
   function formatTime(d = new Date()) {
@@ -238,10 +253,6 @@
     document.body.removeChild(ta);
   }
 
-  function clearSelection() {
-    // Kept for backward compatibility
-  }
-
   function openEditLogModal(id) {
     const log = state.logs.find(l => String(l.id) === String(id));
     const logModal = $('#logModal');
@@ -261,62 +272,70 @@
     setTimeout(() => { if (modalText) modalText.focus(); }, 200);
   }
 
-  /* ── STATS & FILTER ENGINE ── */
-  function updateStats() {
-    const totalEl = $('#statTotalLogs');
-    const todayEl = $('#statTodayLogs');
-    const weekEl = $('#statWeekLogs');
-    const daysEl = $('#statActiveDays');
+  /* ── FILTER & SEARCH LOGIC ── */
+  function isDateFilterActive() {
+    return Boolean(dateFilter.from || dateFilter.to || (dateFilter.preset && dateFilter.preset !== 'all'));
+  }
 
-    const total = state.logs.length;
-    const tStr = todayStr();
+  function updateFilterUi() {
+    const filterBtn = $('#btnFilterLogs');
+    const filterBadge = $('#logFilterBadge');
+    const activeBar = $('#logsActiveFilterBar');
+    const activeText = $('#logsActiveFilterText');
 
-    const now = new Date();
-    const startOfWeek = new Date(now);
-    const day = startOfWeek.getDay();
-    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1); // Monday
-    startOfWeek.setDate(diff);
-    startOfWeek.setHours(0, 0, 0, 0);
-    const weekStartStr = dateStr(startOfWeek);
+    const active = isDateFilterActive();
 
-    let todayCount = 0;
-    let weekCount = 0;
-    const activeDaysSet = new Set();
+    if (filterBtn) {
+      filterBtn.classList.toggle('active', active);
+    }
+    if (filterBadge) {
+      filterBadge.style.display = active ? 'inline-block' : 'none';
+    }
 
-    state.logs.forEach(l => {
-      const ds = l.dateStr || (l.createdAt ? dateStr(new Date(l.createdAt)) : tStr);
-      if (ds === tStr) todayCount++;
-      if (ds >= weekStartStr && ds <= tStr) weekCount++;
-      activeDaysSet.add(ds);
-    });
-
-    if (totalEl) totalEl.textContent = total;
-    if (todayEl) todayEl.textContent = todayCount;
-    if (weekEl) weekEl.textContent = weekCount;
-    if (daysEl) daysEl.textContent = activeDaysSet.size;
+    if (activeBar && activeText) {
+      if (active) {
+        activeBar.style.display = 'flex';
+        if (dateFilter.preset === 'today') {
+          activeText.textContent = 'Showing logs for: Today';
+        } else if (dateFilter.preset === 'yesterday') {
+          activeText.textContent = 'Showing logs for: Yesterday';
+        } else if (dateFilter.preset === 'week') {
+          activeText.textContent = 'Showing logs for: This Week';
+        } else if (dateFilter.from && !dateFilter.to) {
+          activeText.textContent = `Showing logs for: ${formatDayBadge(dateFilter.from)}`;
+        } else if (dateFilter.from && dateFilter.to) {
+          if (dateFilter.from === dateFilter.to) {
+            activeText.textContent = `Showing logs for: ${formatDayBadge(dateFilter.from)}`;
+          } else {
+            activeText.textContent = `Showing logs: ${dateFilter.from} to ${dateFilter.to}`;
+          }
+        } else if (!dateFilter.from && dateFilter.to) {
+          activeText.textContent = `Showing logs up to: ${dateFilter.to}`;
+        }
+      } else {
+        activeBar.style.display = 'none';
+      }
+    }
   }
 
   function getFilteredLogs() {
     let list = state.logs;
 
-    if (currentFilter === 'today') {
-      const t = todayStr();
-      list = list.filter(l => (l.dateStr || (l.createdAt ? dateStr(new Date(l.createdAt)) : '')) === t);
-    } else if (currentFilter === 'yesterday') {
-      const y = yesterdayStr();
-      list = list.filter(l => (l.dateStr || (l.createdAt ? dateStr(new Date(l.createdAt)) : '')) === y);
-    } else if (currentFilter === 'week') {
-      const now = new Date();
-      const startOfWeek = new Date(now);
-      const day = startOfWeek.getDay();
-      const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1);
-      startOfWeek.setDate(diff);
-      startOfWeek.setHours(0, 0, 0, 0);
-      const weekStartStr = dateStr(startOfWeek);
-      const tStr = todayStr();
+    if (dateFilter.from && !dateFilter.to) {
+      // User rule: if from date is selected only, then show for that day only
       list = list.filter(l => {
         const ds = l.dateStr || (l.createdAt ? dateStr(new Date(l.createdAt)) : '');
-        return ds >= weekStartStr && ds <= tStr;
+        return ds === dateFilter.from;
+      });
+    } else if (dateFilter.from && dateFilter.to) {
+      list = list.filter(l => {
+        const ds = l.dateStr || (l.createdAt ? dateStr(new Date(l.createdAt)) : '');
+        return ds >= dateFilter.from && ds <= dateFilter.to;
+      });
+    } else if (!dateFilter.from && dateFilter.to) {
+      list = list.filter(l => {
+        const ds = l.dateStr || (l.createdAt ? dateStr(new Date(l.createdAt)) : '');
+        return ds <= dateFilter.to;
       });
     }
 
@@ -329,7 +348,7 @@
   }
 
   function renderLogs() {
-    updateStats();
+    updateFilterUi();
 
     const feed = $('#logsFeed');
     if (!feed) return;
@@ -352,7 +371,7 @@
         <div class="logs-empty">
           <div class="logs-empty__icon">🔍</div>
           <h3 class="logs-empty__title">No matching logs</h3>
-          <p class="logs-empty__text">${searchQuery ? `No logs matched "${escapeHtml(searchQuery)}". Try another search keyword.` : `No logs found for the "${escapeHtml(currentFilter)}" filter.`}</p>
+          <p class="logs-empty__text">${searchQuery ? `No logs matched "${escapeHtml(searchQuery)}". Try another search keyword.` : `No logs found for the selected date filter.`}</p>
         </div>
       `;
       return;
@@ -444,8 +463,19 @@
     const btnAddLog = $('#btnAddLog');
     const searchInput = $('#logSearchInput');
     const clearBtn = $('#logSearchClear');
-    const filterChips = $('#logFilterChips');
 
+    // Filter Modal Elements
+    const btnFilterLogs = $('#btnFilterLogs');
+    const filterModal = $('#filterModal');
+    const filterModalClose = $('#filterModalClose');
+    const filterPresetChips = $('#filterPresetChips');
+    const filterFromDate = $('#filterFromDate');
+    const filterToDate = $('#filterToDate');
+    const btnApplyFilter = $('#btnApplyFilter');
+    const btnResetFilter = $('#btnResetFilter');
+    const btnClearActiveFilter = $('#btnClearActiveFilter');
+
+    // Add/Edit Log Modal Elements
     const logModal = $('#logModal');
     const modalTitle = $('#logModalTitle');
     const modalDate = $('#modalLogDate');
@@ -536,18 +566,126 @@
       });
     }
 
-    // Filter chips
-    if (filterChips) {
-      filterChips.addEventListener('click', (e) => {
-        const btn = e.target.closest('.log-filter-chip');
-        if (!btn) return;
-        const filter = btn.dataset.filter;
-        if (!filter || filter === currentFilter) return;
+    /* ── DATE FILTER MODAL LISTENERS ── */
+    function openFilterModal() {
+      if (filterFromDate) filterFromDate.value = dateFilter.from || '';
+      if (filterToDate) filterToDate.value = dateFilter.to || '';
 
-        currentFilter = filter;
-        filterChips.querySelectorAll('.log-filter-chip').forEach(b => {
-          b.classList.toggle('active', b === btn);
+      if (filterPresetChips) {
+        filterPresetChips.querySelectorAll('.filter-preset-chip').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.preset === dateFilter.preset);
         });
+      }
+
+      if (filterModal) filterModal.classList.add('open');
+    }
+
+    function closeFilterModal() {
+      if (filterModal) filterModal.classList.remove('open');
+    }
+
+    if (btnFilterLogs) {
+      btnFilterLogs.addEventListener('click', openFilterModal);
+    }
+
+    if (filterModalClose) {
+      filterModalClose.addEventListener('click', closeFilterModal);
+    }
+
+    if (filterModal) {
+      filterModal.addEventListener('click', (e) => {
+        if (e.target === filterModal) closeFilterModal();
+      });
+    }
+
+    if (filterPresetChips) {
+      filterPresetChips.addEventListener('click', (e) => {
+        const chip = e.target.closest('.filter-preset-chip');
+        if (!chip) return;
+
+        const preset = chip.dataset.preset;
+        filterPresetChips.querySelectorAll('.filter-preset-chip').forEach(b => {
+          b.classList.toggle('active', b === chip);
+        });
+
+        if (preset === 'today') {
+          if (filterFromDate) filterFromDate.value = todayStr();
+          if (filterToDate) filterToDate.value = '';
+        } else if (preset === 'yesterday') {
+          if (filterFromDate) filterFromDate.value = yesterdayStr();
+          if (filterToDate) filterToDate.value = '';
+        } else if (preset === 'week') {
+          if (filterFromDate) filterFromDate.value = weekStartStr();
+          if (filterToDate) filterToDate.value = todayStr();
+        } else if (preset === 'all') {
+          if (filterFromDate) filterFromDate.value = '';
+          if (filterToDate) filterToDate.value = '';
+        }
+      });
+    }
+
+    function onDateInputChange() {
+      if (!filterPresetChips) return;
+      const from = filterFromDate ? filterFromDate.value : '';
+      const to = filterToDate ? filterToDate.value : '';
+
+      let matchingPreset = '';
+      if (!from && !to) matchingPreset = 'all';
+      else if (from === todayStr() && !to) matchingPreset = 'today';
+      else if (from === yesterdayStr() && !to) matchingPreset = 'yesterday';
+      else if (from === weekStartStr() && to === todayStr()) matchingPreset = 'week';
+
+      filterPresetChips.querySelectorAll('.filter-preset-chip').forEach(b => {
+        b.classList.toggle('active', b.dataset.preset === matchingPreset);
+      });
+    }
+
+    if (filterFromDate) filterFromDate.addEventListener('change', onDateInputChange);
+    if (filterToDate) filterToDate.addEventListener('change', onDateInputChange);
+
+    if (btnApplyFilter) {
+      btnApplyFilter.addEventListener('click', () => {
+        const from = filterFromDate ? filterFromDate.value : '';
+        const to = filterToDate ? filterToDate.value : '';
+
+        dateFilter.from = from;
+        dateFilter.to = to;
+
+        if (!from && !to) {
+          dateFilter.preset = 'all';
+        } else if (from === todayStr() && (!to || to === todayStr())) {
+          dateFilter.preset = 'today';
+        } else if (from === yesterdayStr() && (!to || to === yesterdayStr())) {
+          dateFilter.preset = 'yesterday';
+        } else if (from === weekStartStr() && to === todayStr()) {
+          dateFilter.preset = 'week';
+        } else {
+          dateFilter.preset = 'custom';
+        }
+
+        closeFilterModal();
+        renderLogs();
+      });
+    }
+
+    if (btnResetFilter) {
+      btnResetFilter.addEventListener('click', () => {
+        dateFilter = { from: '', to: '', preset: 'all' };
+        if (filterFromDate) filterFromDate.value = '';
+        if (filterToDate) filterToDate.value = '';
+        if (filterPresetChips) {
+          filterPresetChips.querySelectorAll('.filter-preset-chip').forEach(b => {
+            b.classList.toggle('active', b.dataset.preset === 'all');
+          });
+        }
+        closeFilterModal();
+        renderLogs();
+      });
+    }
+
+    if (btnClearActiveFilter) {
+      btnClearActiveFilter.addEventListener('click', () => {
+        dateFilter = { from: '', to: '', preset: 'all' };
         renderLogs();
       });
     }

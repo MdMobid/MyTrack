@@ -39,55 +39,27 @@
       </button>
     </nav>
 
-    <!-- STATS CARDS -->
-    <section class="logs-stats" id="logsStats">
-      <div class="lstat lstat--total">
-        <div class="lstat__icon">📝</div>
-        <div>
-          <div class="lstat__value" id="statTotalLogs">0</div>
-          <div class="lstat__label">Total Logs</div>
-        </div>
-        <div class="lstat__glow"></div>
-      </div>
-      <div class="lstat lstat--today">
-        <div class="lstat__icon">📅</div>
-        <div>
-          <div class="lstat__value" id="statTodayLogs">0</div>
-          <div class="lstat__label">Today</div>
-        </div>
-        <div class="lstat__glow"></div>
-      </div>
-      <div class="lstat lstat--week">
-        <div class="lstat__icon">📊</div>
-        <div>
-          <div class="lstat__value" id="statWeekLogs">0</div>
-          <div class="lstat__label">This Week</div>
-        </div>
-        <div class="lstat__glow"></div>
-      </div>
-      <div class="lstat lstat--days">
-        <div class="lstat__icon">🗓️</div>
-        <div>
-          <div class="lstat__value" id="statActiveDays">0</div>
-          <div class="lstat__label">Active Days</div>
-        </div>
-        <div class="lstat__glow"></div>
-      </div>
-    </section>
-
-    <!-- TOOLBAR / SEARCH & FILTERS -->
+    <!-- TOOLBAR / SEARCH & DATE FILTER -->
     <div class="logs-toolbar">
       <div class="logs-search">
         <span class="logs-search__icon">🔍</span>
         <input type="text" id="logSearchInput" class="logs-search__input" placeholder="Search logs...">
         <button id="logSearchClear" class="logs-search__clear" title="Clear search" style="display:none;">✕</button>
       </div>
-      <div class="logs-filter-chips" id="logFilterChips">
-        <button class="log-filter-chip active" data-filter="all">All</button>
-        <button class="log-filter-chip" data-filter="today">Today</button>
-        <button class="log-filter-chip" data-filter="yesterday">Yesterday</button>
-        <button class="log-filter-chip" data-filter="week">This Week</button>
+      <button class="logs-filter-btn" id="btnFilterLogs" title="Filter by date">
+        <span class="logs-filter-btn__icon">📅</span>
+        <span class="logs-filter-btn__text">Filter</span>
+        <span class="logs-filter-btn__badge" id="logFilterBadge" style="display:none;"></span>
+      </button>
+    </div>
+
+    <!-- ACTIVE FILTER BANNER -->
+    <div class="logs-active-filter-bar" id="logsActiveFilterBar" style="display:none;">
+      <div class="logs-active-filter-bar__content">
+        <span class="logs-active-filter-bar__icon">📅</span>
+        <span id="logsActiveFilterText">Filtered by date</span>
       </div>
+      <button id="btnClearActiveFilter" class="logs-active-filter-bar__clear" title="Clear date filter">✕ Clear</button>
     </div>
 
     <!-- LOG FEED -->
@@ -99,6 +71,43 @@
 
   <!-- TOAST CONTAINER -->
   <div class="toast-container" id="toastContainer"></div>
+
+  <!-- DATE FILTER MODAL -->
+  <div class="modal-overlay" id="filterModal">
+    <div class="modal" style="max-width: 440px;">
+      <button class="modal__close" id="filterModalClose">✕</button>
+      <h2 class="modal__title">Filter Logs</h2>
+
+      <div class="modal__field" style="margin-top: 14px;">
+        <label class="modal__label">Quick Presets</label>
+        <div class="filter-preset-chips" id="filterPresetChips">
+          <button type="button" class="filter-preset-chip" data-preset="today">Today</button>
+          <button type="button" class="filter-preset-chip" data-preset="yesterday">Yesterday</button>
+          <button type="button" class="filter-preset-chip" data-preset="week">This Week</button>
+          <button type="button" class="filter-preset-chip active" data-preset="all">All</button>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px;">
+        <div class="modal__field">
+          <label class="modal__label">From Date</label>
+          <input class="modal__input" type="date" id="filterFromDate">
+        </div>
+        <div class="modal__field">
+          <label class="modal__label">To Date</label>
+          <input class="modal__input" type="date" id="filterToDate">
+        </div>
+      </div>
+      <p style="font-size: 0.74rem; color: var(--t3); margin-top: 8px;">
+        * If only "From Date" is selected, logs for that day only will be shown.
+      </p>
+
+      <div class="modal__actions" style="margin-top: 20px;">
+        <button type="button" class="modal__btn modal__btn--cancel" id="btnResetFilter">Reset</button>
+        <button type="button" class="modal__btn modal__btn--primary" id="btnApplyFilter" style="background:var(--grad-primary);">Apply Filter</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ADD / EDIT LOG MODAL -->
   <div class="modal-overlay" id="logModal">
