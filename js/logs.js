@@ -12,6 +12,7 @@
   };
 
   let searchQuery = '';
+  let currentFilter = 'all';
   let editingLogId = null;
 
   /* ── DOM SELECTORS ── */
@@ -151,22 +152,19 @@
       updatedAt: Date.now()
     };
 
-    state.logs.push(newLog);
+    state.logs.unshift(newLog);
     saveState();
     renderLogs();
 
-    // Scroll to the added log or day group
-    const feed = $('#logsFeed');
-    if (feed) {
-      requestAnimationFrame(() => {
-        const addedGroup = document.querySelector(`.log-day-group[data-date="${ds}"]`);
-        if (addedGroup) {
-          addedGroup.scrollIntoView({ behavior: 'smooth', block: 'end' });
-        } else {
-          feed.scrollTop = feed.scrollHeight;
-        }
-      });
-    }
+    // Scroll smoothly to newly added log or top
+    requestAnimationFrame(() => {
+      const addedRow = document.getElementById(`row-${newLog.id}`);
+      if (addedRow) {
+        addedRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
 
     showToast('Log added!', 'success');
   }
@@ -192,31 +190,6 @@
     showToast('Log updated!', 'success');
   }
 
-  /* ── SELECTION & MODAL UTILS ── */
-  function clearSelection() {
-    $$('.log-row.is-selected').forEach(r => r.classList.remove('is-selected'));
-  }
-
-  function openEditLogModal(id) {
-    const log = state.logs.find(l => String(l.id) === String(id));
-    const logModal = $('#logModal');
-    const modalTitle = $('#logModalTitle');
-    const modalDate = $('#modalLogDate');
-    const modalText = $('#modalLogText');
-
-    if (!log || !logModal || !modalText) return;
-
-    editingLogId = String(id);
-    if (modalTitle) modalTitle.textContent = 'Edit Log';
-    if (modalDate) {
-      modalDate.value = log.dateStr || (log.createdAt ? dateStr(new Date(log.createdAt)) : todayStr());
-    }
-    modalText.value = log.text;
-    logModal.classList.add('open');
-    clearSelection();
-    setTimeout(() => { if (modalText) modalText.focus(); }, 200);
-  }
-
   function deleteLog(id) {
     if (!id) return;
     const idStr = String(id);
@@ -233,7 +206,6 @@
     state.deletedLogIds.push({ id: idStr, deletedAt: Date.now() });
 
     saveState();
-    clearSelection();
     renderLogs();
     showToast('Log deleted', 'info');
   }
@@ -248,7 +220,6 @@
     } else {
       fallbackCopy(text);
     }
-    clearSelection();
   }
 
   function fallbackCopy(text) {
@@ -267,14 +238,99 @@
     document.body.removeChild(ta);
   }
 
-  /* ── RENDER ENGINE ── */
+  function clearSelection() {
+    // Kept for backward compatibility
+  }
+
+  function openEditLogModal(id) {
+    const log = state.logs.find(l => String(l.id) === String(id));
+    const logModal = $('#logModal');
+    const modalTitle = $('#logModalTitle');
+    const modalDate = $('#modalLogDate');
+    const modalText = $('#modalLogText');
+
+    if (!log || !logModal || !modalText) return;
+
+    editingLogId = String(id);
+    if (modalTitle) modalTitle.textContent = 'Edit Log';
+    if (modalDate) {
+      modalDate.value = log.dateStr || (log.createdAt ? dateStr(new Date(log.createdAt)) : todayStr());
+    }
+    modalText.value = log.text;
+    logModal.classList.add('open');
+    setTimeout(() => { if (modalText) modalText.focus(); }, 200);
+  }
+
+  /* ── STATS & FILTER ENGINE ── */
+  function updateStats() {
+    const totalEl = $('#statTotalLogs');
+    const todayEl = $('#statTodayLogs');
+    const weekEl = $('#statWeekLogs');
+    const daysEl = $('#statActiveDays');
+
+    const total = state.logs.length;
+    const tStr = todayStr();
+
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    const day = startOfWeek.getDay();
+    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1); // Monday
+    startOfWeek.setDate(diff);
+    startOfWeek.setHours(0, 0, 0, 0);
+    const weekStartStr = dateStr(startOfWeek);
+
+    let todayCount = 0;
+    let weekCount = 0;
+    const activeDaysSet = new Set();
+
+    state.logs.forEach(l => {
+      const ds = l.dateStr || (l.createdAt ? dateStr(new Date(l.createdAt)) : tStr);
+      if (ds === tStr) todayCount++;
+      if (ds >= weekStartStr && ds <= tStr) weekCount++;
+      activeDaysSet.add(ds);
+    });
+
+    if (totalEl) totalEl.textContent = total;
+    if (todayEl) todayEl.textContent = todayCount;
+    if (weekEl) weekEl.textContent = weekCount;
+    if (daysEl) daysEl.textContent = activeDaysSet.size;
+  }
+
   function getFilteredLogs() {
-    if (!searchQuery) return state.logs;
-    const q = searchQuery.toLowerCase();
-    return state.logs.filter(l => l.text.toLowerCase().includes(q));
+    let list = state.logs;
+
+    if (currentFilter === 'today') {
+      const t = todayStr();
+      list = list.filter(l => (l.dateStr || (l.createdAt ? dateStr(new Date(l.createdAt)) : '')) === t);
+    } else if (currentFilter === 'yesterday') {
+      const y = yesterdayStr();
+      list = list.filter(l => (l.dateStr || (l.createdAt ? dateStr(new Date(l.createdAt)) : '')) === y);
+    } else if (currentFilter === 'week') {
+      const now = new Date();
+      const startOfWeek = new Date(now);
+      const day = startOfWeek.getDay();
+      const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1);
+      startOfWeek.setDate(diff);
+      startOfWeek.setHours(0, 0, 0, 0);
+      const weekStartStr = dateStr(startOfWeek);
+      const tStr = todayStr();
+      list = list.filter(l => {
+        const ds = l.dateStr || (l.createdAt ? dateStr(new Date(l.createdAt)) : '');
+        return ds >= weekStartStr && ds <= tStr;
+      });
+    }
+
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(l => l.text.toLowerCase().includes(q));
+    }
+
+    return list;
   }
 
   function renderLogs() {
+    updateStats();
+
     const feed = $('#logsFeed');
     if (!feed) return;
 
@@ -296,7 +352,7 @@
         <div class="logs-empty">
           <div class="logs-empty__icon">🔍</div>
           <h3 class="logs-empty__title">No matching logs</h3>
-          <p class="logs-empty__text">No logs matched "${escapeHtml(searchQuery)}". Try another search keyword.</p>
+          <p class="logs-empty__text">${searchQuery ? `No logs matched "${escapeHtml(searchQuery)}". Try another search keyword.` : `No logs found for the "${escapeHtml(currentFilter)}" filter.`}</p>
         </div>
       `;
       return;
@@ -310,12 +366,13 @@
       groups[ds].push(log);
     });
 
-    // Sort dates ascending
-    const sortedDates = Object.keys(groups).sort();
+    // Sort dates DESCENDING: Today at top, then Yesterday, then older dates descending
+    const sortedDates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
 
     let html = '';
     sortedDates.forEach(ds => {
-      const dayLogs = groups[ds].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+      // Sort logs within day descending: latest log at top
+      const dayLogs = groups[ds].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
       const isToday = ds === todayStr();
       const badgeText = formatDayBadge(ds);
 
@@ -338,208 +395,48 @@
     const logId = String(log.id);
 
     return `
-      <div class="log-row" id="row-${logId}" data-id="${logId}">
-        <div class="log-item-track">
-          <div class="log-bubble-container">
-            <div class="log-bubble"><div class="log-text">${formattedText}</div></div>
-            <div class="log-actions">
-              <button type="button" class="log-action-btn" data-action="copy" data-id="${logId}" title="Copy" aria-label="Copy">📋</button>
-              <button type="button" class="log-action-btn" data-action="edit" data-id="${logId}" title="Edit" aria-label="Edit">✏️</button>
-              <button type="button" class="log-action-btn delete" data-action="delete" data-id="${logId}" title="Delete" aria-label="Delete">🗑️</button>
-            </div>
+      <div class="log-card" id="row-${logId}" data-id="${logId}">
+        <div class="log-card__header">
+          <div class="log-card__meta">
+            <span class="log-card__time-icon">🕒</span>
+            <span>${time}</span>
+          </div>
+          <div class="log-card__actions">
+            <button type="button" class="log-action-btn" data-action="copy" data-id="${logId}" title="Copy" aria-label="Copy">📋</button>
+            <button type="button" class="log-action-btn" data-action="edit" data-id="${logId}" title="Edit" aria-label="Edit">✏️</button>
+            <button type="button" class="log-action-btn del" data-action="delete" data-id="${logId}" title="Delete" aria-label="Delete">🗑️</button>
           </div>
         </div>
-        <div class="log-time-reveal" aria-hidden="true">
-          <span class="log-time-text">${time}</span>
-        </div>
+        <div class="log-card__text">${formattedText}</div>
       </div>
     `;
   }
 
-  /* ── GESTURE & INTERACTION ENGINE (PER-ROW SWIPE & DIRECT TAP SELECTION) ── */
-  function initInstagramSwipeGesture() {
+  /* ── FEED INTERACTIONS ── */
+  function initFeedInteractions() {
     const feed = $('#logsFeed');
     if (!feed) return;
 
-    let activeRow = null;
-    let isDragging = false;
-    let isGestureLocked = false;
-    let startX = 0;
-    let startY = 0;
-    let initialX = 0;
-    let currentX = 0;
-
-    const REVEAL_WIDTH = 75; // px to reveal timestamp
-
-    function clearOtherRevealed(exceptRow) {
-      $$('.log-row.is-revealed').forEach(r => {
-        if (r !== exceptRow) {
-          r.classList.remove('is-revealed');
-          r.style.removeProperty('--row-drag-x');
-        }
-      });
-    }
-
-    function onPointerDown(e) {
-      if (e.button !== undefined && e.button !== 0) return;
-
-      // Click on buttons, inputs, or actions bar should not trigger row drag
-      if (e.target.closest('button, a, input, textarea, .log-actions, .log-action-btn')) return;
-
-      const row = e.target.closest('.log-row');
-      if (!row) {
-        clearSelection();
-        return;
-      }
-
-      clearOtherRevealed(row);
-
-      activeRow = row;
-      isDragging = false;
-      isGestureLocked = false;
-      startX = e.clientX;
-      startY = e.clientY;
-      initialX = row.classList.contains('is-revealed') ? -REVEAL_WIDTH : 0;
-      currentX = initialX;
-    }
-
-    function onPointerMove(e) {
-      if (!activeRow) return;
-
-      const deltaX = e.clientX - startX;
-      const deltaY = e.clientY - startY;
-
-      // Determine gesture direction
-      if (!isGestureLocked) {
-        if (Math.abs(deltaY) > 8 && Math.abs(deltaY) > Math.abs(deltaX)) {
-          // Vertical scroll detected; abandon horizontal drag
-          activeRow = null;
-          return;
-        }
-
-        if (Math.abs(deltaX) > 8 && Math.abs(deltaX) >= Math.abs(deltaY)) {
-          isGestureLocked = true;
-          isDragging = true;
-          clearSelection();
-          activeRow.classList.add('is-dragging');
-          try {
-            if (activeRow.setPointerCapture) activeRow.setPointerCapture(e.pointerId);
-          } catch (err) { }
-        }
-      }
-
-      if (!isDragging || !activeRow) return;
-
-      if (e.cancelable) e.preventDefault();
-
-      let targetX = initialX + deltaX;
-
-      // Clamping with slight resistance
-      if (targetX > 0) {
-        targetX = targetX * 0.12;
-      } else if (targetX < -REVEAL_WIDTH) {
-        const extra = targetX + REVEAL_WIDTH;
-        targetX = -REVEAL_WIDTH + extra * 0.22;
-      }
-
-      currentX = targetX;
-      activeRow.style.setProperty('--row-drag-x', `${targetX}px`);
-    }
-
-    function onPointerUp(e) {
-      if (!activeRow) return;
-
-      const row = activeRow;
-      activeRow = null;
-
-      if (isDragging) {
-        isDragging = false;
-        row.classList.remove('is-dragging');
-        try {
-          if (row.releasePointerCapture && e.pointerId) {
-            row.releasePointerCapture(e.pointerId);
-          }
-        } catch (err) { }
-
-        // Sticky snap logic: stays in place until dragged back
-        if (initialX === 0) {
-          // Started closed: drag left past halfway snaps open
-          if (currentX < -32) {
-            row.classList.add('is-revealed');
-          } else {
-            row.classList.remove('is-revealed');
-          }
-        } else {
-          // Started open: drag right past halfway closes it
-          if (currentX > -42) {
-            row.classList.remove('is-revealed');
-          } else {
-            row.classList.add('is-revealed');
-          }
-        }
-
-        row.style.removeProperty('--row-drag-x');
-      } else {
-        // Direct click/tap on the log: toggle options immediately!
-        if (row.classList.contains('is-revealed')) {
-          row.classList.remove('is-revealed');
-          row.style.removeProperty('--row-drag-x');
-        } else if (row.classList.contains('is-selected')) {
-          row.classList.remove('is-selected');
-        } else {
-          clearSelection();
-          row.classList.add('is-selected');
-        }
-      }
-    }
-
-    // Right-click / context menu triggers selection for desktop convenience
-    feed.addEventListener('contextmenu', (e) => {
-      const row = e.target.closest('.log-row');
-      if (row) {
-        e.preventDefault();
-        clearSelection();
-        row.classList.add('is-selected');
-      }
-    });
-
-    // Dismiss selection on click outside
-    document.addEventListener('pointerdown', (e) => {
-      if (!e.target.closest('.log-row.is-selected, .log-actions, .log-action-btn')) {
-        clearSelection();
-      }
-    });
-
-    // Direct click handler for action buttons & actions bar
     feed.addEventListener('click', (e) => {
-      const actionsBar = e.target.closest('.log-actions');
-      if (actionsBar) {
-        e.preventDefault();
-        e.stopPropagation();
+      const btn = e.target.closest('.log-action-btn');
+      if (!btn) return;
 
-        const btn = e.target.closest('.log-action-btn');
-        if (!btn) return;
+      e.preventDefault();
+      e.stopPropagation();
 
-        const action = btn.dataset.action;
-        const id = btn.dataset.id;
-        if (!id) return;
+      const action = btn.dataset.action;
+      const id = btn.dataset.id;
+      if (!id) return;
 
-        if (action === 'delete') {
-          deleteLog(id);
-        } else if (action === 'edit') {
-          openEditLogModal(id);
-        } else if (action === 'copy') {
-          const log = state.logs.find(l => String(l.id) === String(id));
-          if (log) copyLog(log.text);
-        }
-        return;
+      if (action === 'delete') {
+        deleteLog(id);
+      } else if (action === 'edit') {
+        openEditLogModal(id);
+      } else if (action === 'copy') {
+        const log = state.logs.find(l => String(l.id) === String(id));
+        if (log) copyLog(log.text);
       }
     });
-
-    feed.addEventListener('pointerdown', onPointerDown);
-    window.addEventListener('pointermove', onPointerMove, { passive: false });
-    window.addEventListener('pointerup', onPointerUp);
-    window.addEventListener('pointercancel', onPointerUp);
   }
 
   /* ── INPUT & MODAL LISTENERS ── */
@@ -547,6 +444,7 @@
     const btnAddLog = $('#btnAddLog');
     const searchInput = $('#logSearchInput');
     const clearBtn = $('#logSearchClear');
+    const filterChips = $('#logFilterChips');
 
     const logModal = $('#logModal');
     const modalTitle = $('#logModalTitle');
@@ -622,7 +520,7 @@
       searchInput.addEventListener('input', () => {
         searchQuery = searchInput.value.trim();
         if (clearBtn) {
-          clearBtn.style.display = searchQuery ? 'block' : 'none';
+          clearBtn.style.display = searchQuery ? 'flex' : 'none';
         }
         renderLogs();
       });
@@ -635,6 +533,22 @@
         clearBtn.style.display = 'none';
         renderLogs();
         if (searchInput) searchInput.focus();
+      });
+    }
+
+    // Filter chips
+    if (filterChips) {
+      filterChips.addEventListener('click', (e) => {
+        const btn = e.target.closest('.log-filter-chip');
+        if (!btn) return;
+        const filter = btn.dataset.filter;
+        if (!filter || filter === currentFilter) return;
+
+        currentFilter = filter;
+        filterChips.querySelectorAll('.log-filter-chip').forEach(b => {
+          b.classList.toggle('active', b === btn);
+        });
+        renderLogs();
       });
     }
 
@@ -669,16 +583,8 @@
   function init() {
     loadState();
     renderLogs();
-    initInstagramSwipeGesture();
+    initFeedInteractions();
     initInputAndEvents();
-
-    // Scroll to bottom on initial load
-    const feed = $('#logsFeed');
-    if (feed) {
-      setTimeout(() => {
-        feed.scrollTop = feed.scrollHeight;
-      }, 100);
-    }
   }
 
   if (document.readyState === 'loading') {

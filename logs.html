@@ -39,28 +39,61 @@
       </button>
     </nav>
 
-    <!-- LOGS CONTAINER -->
-    <div class="logs-wrapper">
-
-      <!-- TOOLBAR / SEARCH -->
-      <div class="logs-toolbar">
-        <div class="logs-search">
-          <span class="logs-search__icon">🔍</span>
-          <input type="text" id="logSearchInput" class="logs-search__input" placeholder="Search logs...">
-          <button id="logSearchClear" class="logs-search__clear" title="Clear search" style="display:none;">✕</button>
+    <!-- STATS CARDS -->
+    <section class="logs-stats" id="logsStats">
+      <div class="lstat lstat--total">
+        <div class="lstat__icon">📝</div>
+        <div>
+          <div class="lstat__value" id="statTotalLogs">0</div>
+          <div class="lstat__label">Total Logs</div>
         </div>
-        <div class="logs-hint">
-          <span class="logs-hint__icon">👈</span>
-          <span class="logs-hint__text">Swipe left to reveal time · Tap log for options</span>
-        </div>
+        <div class="lstat__glow"></div>
       </div>
+      <div class="lstat lstat--today">
+        <div class="lstat__icon">📅</div>
+        <div>
+          <div class="lstat__value" id="statTodayLogs">0</div>
+          <div class="lstat__label">Today</div>
+        </div>
+        <div class="lstat__glow"></div>
+      </div>
+      <div class="lstat lstat--week">
+        <div class="lstat__icon">📊</div>
+        <div>
+          <div class="lstat__value" id="statWeekLogs">0</div>
+          <div class="lstat__label">This Week</div>
+        </div>
+        <div class="lstat__glow"></div>
+      </div>
+      <div class="lstat lstat--days">
+        <div class="lstat__icon">🗓️</div>
+        <div>
+          <div class="lstat__value" id="statActiveDays">0</div>
+          <div class="lstat__label">Active Days</div>
+        </div>
+        <div class="lstat__glow"></div>
+      </div>
+    </section>
 
-      <!-- LOG STREAM (INTERACTIVE SWIPE / DRAG AREA) -->
-      <main id="logsFeed" class="logs-feed" aria-label="Log Stream">
-        <!-- Day groups & log items rendered dynamically here -->
-      </main>
-
+    <!-- TOOLBAR / SEARCH & FILTERS -->
+    <div class="logs-toolbar">
+      <div class="logs-search">
+        <span class="logs-search__icon">🔍</span>
+        <input type="text" id="logSearchInput" class="logs-search__input" placeholder="Search logs...">
+        <button id="logSearchClear" class="logs-search__clear" title="Clear search" style="display:none;">✕</button>
+      </div>
+      <div class="logs-filter-chips" id="logFilterChips">
+        <button class="log-filter-chip active" data-filter="all">All</button>
+        <button class="log-filter-chip" data-filter="today">Today</button>
+        <button class="log-filter-chip" data-filter="yesterday">Yesterday</button>
+        <button class="log-filter-chip" data-filter="week">This Week</button>
+      </div>
     </div>
+
+    <!-- LOG FEED -->
+    <main id="logsFeed" class="logs-feed" aria-label="Logs Feed">
+      <!-- Day groups & log items rendered dynamically here -->
+    </main>
 
   </div>
 
