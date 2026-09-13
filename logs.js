@@ -126,36 +126,52 @@
   }
 
   /* ── LOG OPERATIONS ── */
-  function addLog(text) {
+  function addLog(text, chosenDate) {
     const trimmed = text.trim();
     if (!trimmed) return;
 
     const now = new Date();
+    const ds = chosenDate || todayStr();
+
+    let timestamp;
+    if (ds === todayStr()) {
+      timestamp = now.getTime();
+    } else {
+      const [y, m, d] = ds.split('-').map(Number);
+      const customDate = new Date(y, m - 1, d, now.getHours(), now.getMinutes(), now.getSeconds());
+      timestamp = customDate.getTime();
+    }
+
     const newLog = {
       id: 'log_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
       text: trimmed,
-      createdAt: now.getTime(),
-      dateStr: dateStr(now),
+      createdAt: timestamp,
+      dateStr: ds,
       timeStr: formatTime(now),
-      updatedAt: now.getTime()
+      updatedAt: Date.now()
     };
 
     state.logs.push(newLog);
     saveState();
     renderLogs();
 
-    // Scroll to bottom
+    // Scroll to the added log or day group
     const feed = $('#logsFeed');
     if (feed) {
       requestAnimationFrame(() => {
-        feed.scrollTop = feed.scrollHeight;
+        const addedGroup = document.querySelector(`.log-day-group[data-date="${ds}"]`);
+        if (addedGroup) {
+          addedGroup.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        } else {
+          feed.scrollTop = feed.scrollHeight;
+        }
       });
     }
 
     showToast('Log added!', 'success');
   }
 
-  function updateLog(id, newText) {
+  function updateLog(id, newText, chosenDate) {
     const trimmed = newText.trim();
     if (!trimmed) return;
 
@@ -163,6 +179,13 @@
     if (!log) return;
 
     log.text = trimmed;
+    if (chosenDate) {
+      log.dateStr = chosenDate;
+      const [y, m, d] = chosenDate.split('-').map(Number);
+      const prevDate = log.createdAt ? new Date(log.createdAt) : new Date();
+      const updatedDate = new Date(y, m - 1, d, prevDate.getHours(), prevDate.getMinutes(), prevDate.getSeconds());
+      log.createdAt = updatedDate.getTime();
+    }
     log.updatedAt = Date.now();
     saveState();
     renderLogs();
@@ -265,7 +288,7 @@
 
     let html = '';
     sortedDates.forEach(ds => {
-      const dayLogs = groups[ds];
+      const dayLogs = groups[ds].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
       const isToday = ds === todayStr();
       const badgeText = formatDayBadge(ds);
 
@@ -293,9 +316,9 @@
           <div class="log-bubble-container">
             <div class="log-bubble"><div class="log-text">${formattedText}</div></div>
             <div class="log-actions" onclick="event.stopPropagation()">
-              <button type="button" class="log-action-btn" data-action="copy" data-id="${logId}" title="Copy text" onclick="window.__copyLog('${logId}', event)">📋 Copy</button>
-              <button type="button" class="log-action-btn" data-action="edit" data-id="${logId}" title="Edit log" onclick="window.__editLog('${logId}', event)">✏️ Edit</button>
-              <button type="button" class="log-action-btn delete" data-action="delete" data-id="${logId}" title="Delete log" onclick="window.__deleteLog('${logId}', event)">🗑️ Delete</button>
+              <button type="button" class="log-action-btn" data-action="copy" data-id="${logId}" title="Copy" aria-label="Copy">📋</button>
+              <button type="button" class="log-action-btn" data-action="edit" data-id="${logId}" title="Edit" aria-label="Edit">✏️</button>
+              <button type="button" class="log-action-btn delete" data-action="delete" data-id="${logId}" title="Delete" aria-label="Delete">🗑️</button>
             </div>
           </div>
         </div>
@@ -306,7 +329,7 @@
     `;
   }
 
-  /* ── GESTURE & INTERACTION ENGINE (PER-ROW SWIPE & LONG-PRESS) ── */
+  /* ── GESTURE & INTERACTION ENGINE (PER-ROW SWIPE & DIRECT TAP SELECTION) ── */
   function initInstagramSwipeGesture() {
     const feed = $('#logsFeed');
     if (!feed) return;
@@ -318,8 +341,6 @@
     let startY = 0;
     let initialX = 0;
     let currentX = 0;
-    let longPressTimer = null;
-    let longPressFired = false;
 
     const REVEAL_WIDTH = 75; // px to reveal timestamp
 
@@ -348,30 +369,15 @@
         return;
       }
 
-      if (!row.classList.contains('is-selected')) {
-        clearSelection();
-      }
       clearOtherRevealed(row);
 
       activeRow = row;
       isDragging = false;
       isGestureLocked = false;
-      longPressFired = false;
       startX = e.clientX;
       startY = e.clientY;
       initialX = row.classList.contains('is-revealed') ? -REVEAL_WIDTH : 0;
       currentX = initialX;
-
-      // Start long-press timer (450ms)
-      clearTimeout(longPressTimer);
-      longPressTimer = setTimeout(() => {
-        if (!isDragging && activeRow && !longPressFired) {
-          longPressFired = true;
-          clearSelection();
-          activeRow.classList.add('is-selected');
-          if (navigator.vibrate) navigator.vibrate(35);
-        }
-      }, 450);
     }
 
     function onPointerMove(e) {
@@ -380,17 +386,10 @@
       const deltaX = e.clientX - startX;
       const deltaY = e.clientY - startY;
 
-      // If moved more than 6px, cancel long-press
-      if (Math.abs(deltaX) > 6 || Math.abs(deltaY) > 6) {
-        clearTimeout(longPressTimer);
-        longPressTimer = null;
-      }
-
       // Determine gesture direction
       if (!isGestureLocked) {
         if (Math.abs(deltaY) > 8 && Math.abs(deltaY) > Math.abs(deltaX)) {
           // Vertical scroll detected; abandon horizontal drag
-          clearTimeout(longPressTimer);
           activeRow = null;
           return;
         }
@@ -398,7 +397,6 @@
         if (Math.abs(deltaX) > 8 && Math.abs(deltaX) >= Math.abs(deltaY)) {
           isGestureLocked = true;
           isDragging = true;
-          clearTimeout(longPressTimer);
           clearSelection();
           activeRow.classList.add('is-dragging');
           try {
@@ -426,8 +424,6 @@
     }
 
     function onPointerUp(e) {
-      clearTimeout(longPressTimer);
-
       if (!activeRow) return;
 
       const row = activeRow;
@@ -460,13 +456,16 @@
         }
 
         row.style.removeProperty('--row-drag-x');
-      } else if (!longPressFired) {
-        // Normal quick tap
+      } else {
+        // Direct click/tap on the log: toggle options immediately!
         if (row.classList.contains('is-revealed')) {
           row.classList.remove('is-revealed');
           row.style.removeProperty('--row-drag-x');
         } else if (row.classList.contains('is-selected')) {
           row.classList.remove('is-selected');
+        } else {
+          clearSelection();
+          row.classList.add('is-selected');
         }
       }
     }
@@ -525,6 +524,7 @@
 
     const logModal = $('#logModal');
     const modalTitle = $('#logModalTitle');
+    const modalDate = $('#modalLogDate');
     const modalText = $('#modalLogText');
     const btnSaveLog = $('#btnSaveLog');
     const btnCancelLog = $('#btnCancelLog');
@@ -533,6 +533,7 @@
     function openNewLogModal() {
       editingLogId = null;
       if (modalTitle) modalTitle.textContent = 'New Log';
+      if (modalDate) modalDate.value = todayStr();
       if (modalText) {
         modalText.value = '';
         modalText.placeholder = 'Write a log, reflection, or note...';
@@ -561,10 +562,12 @@
           return;
         }
 
+        const chosenDate = modalDate && modalDate.value ? modalDate.value : todayStr();
+
         if (editingLogId) {
-          updateLog(editingLogId, val);
+          updateLog(editingLogId, val, chosenDate);
         } else {
-          addLog(val);
+          addLog(val, chosenDate);
         }
         closeLogModal();
       });
@@ -630,6 +633,9 @@
 
       editingLogId = String(id);
       if (modalTitle) modalTitle.textContent = 'Edit Log';
+      if (modalDate) {
+        modalDate.value = log.dateStr || (log.createdAt ? dateStr(new Date(log.createdAt)) : todayStr());
+      }
       modalText.value = log.text;
       logModal.classList.add('open');
       $$('.log-row.is-selected').forEach(r => r.classList.remove('is-selected'));

@@ -5,8 +5,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MyTrack — Logs</title>
-  <link rel="stylesheet" href="shared.css?v=1.9">
-  <link rel="stylesheet" href="logs.css?v=1.9">
+  <link rel="stylesheet" href="shared.css?v=2.1">
+  <link rel="stylesheet" href="logs.css?v=2.1">
   <link rel="icon" type="image/png" href="icon-192.png">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0f172a">
@@ -51,7 +51,7 @@
         </div>
         <div class="logs-hint">
           <span class="logs-hint__icon">👈</span>
-          <span class="logs-hint__text">Swipe left to reveal time · Hold log for options</span>
+          <span class="logs-hint__text">Swipe left to reveal time · Tap log for options</span>
         </div>
       </div>
 
@@ -73,6 +73,10 @@
       <button class="modal__close" id="logModalClose">✕</button>
       <h2 class="modal__title" id="logModalTitle">New Log</h2>
       <div class="modal__field" style="margin-top: 14px;">
+        <label class="modal__label">Date</label>
+        <input class="modal__input" type="date" id="modalLogDate">
+      </div>
+      <div class="modal__field" style="margin-top: 14px;">
         <label class="modal__label">What's on your mind?</label>
         <textarea class="modal__input" id="modalLogText" rows="4"
           placeholder="Write a log, reflection, or note..."
@@ -87,7 +91,7 @@
 
   <!-- SCRIPTS -->
   <script src="db.js"></script>
-  <script src="logs.js?v=1.9"></script>
+  <script src="logs.js?v=2.1"></script>
 </body>
 
 </html>
