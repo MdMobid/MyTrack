@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mytrack-v2.1';
+const CACHE_NAME = 'mytrack-v2.2';
 const ASSETS = [
   './',
   './index.html',
@@ -6,18 +6,20 @@ const ASSETS = [
   './todos.html',
   './expenses.html',
   './logs.html',
-  './style.css',
-  './shared.css',
-  './todos.css',
-  './expenses.css',
-  './logs.css',
-  './app.js',
-  './todos.js',
-  './expenses.js',
-  './logs.js',
-  './db.js',
-  './icon-192.png',
-  './icon-512.png',
+  './css/shared.css',
+  './css/today.css',
+  './css/habits.css',
+  './css/todos.css',
+  './css/expenses.css',
+  './css/logs.css',
+  './js/db.js',
+  './js/today.js',
+  './js/habits.js',
+  './js/todos.js',
+  './js/expenses.js',
+  './js/logs.js',
+  './assets/icon-192.png',
+  './assets/icon-512.png',
   './manifest.json'
 ];
 
