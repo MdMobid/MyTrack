@@ -293,24 +293,25 @@
 /* ── ACTION BUTTONS (FLOATING GLASS CAPSULE TOOLBAR - ICONS ONLY) ── */
 .log-actions {
   position: absolute;
-  top: -15px;
+  top: -16px;
   right: 14px;
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   opacity: 0;
   pointer-events: none;
-  background: rgba(13, 17, 34, 0.94);
+  background: rgba(13, 17, 34, 0.96);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(0, 212, 255, 0.35);
+  border: 1px solid rgba(0, 212, 255, 0.4);
   border-radius: 24px;
-  padding: 3px 6px;
+  padding: 4px 8px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 14px rgba(0, 212, 255, 0.2);
   transform: translateY(6px) scale(0.92);
   transition: opacity 0.2s var(--ease), transform 0.22s var(--spring);
   z-index: 100;
+  touch-action: manipulation;
 }
 
 .log-row.is-selected .log-actions {
@@ -320,20 +321,22 @@
 }
 
 .log-action-btn {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   padding: 0;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   color: #e2e8f0;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   pointer-events: auto !important;
-  font-size: 0.88rem;
+  touch-action: manipulation;
+  font-size: 0.95rem;
   line-height: 1;
+  user-select: none;
   transition: all 0.18s var(--ease);
 }
 
@@ -348,6 +351,10 @@
   background: var(--grad-fire);
   border-color: transparent;
   box-shadow: 0 3px 10px rgba(248, 113, 113, 0.4);
+}
+
+.log-action-btn:active {
+  transform: scale(0.9);
 }
 
 /* ── TIME REVEAL (ILLUMINATED CYBERPUNK TIMESTAMP) ── */

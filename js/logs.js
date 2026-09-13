@@ -192,6 +192,31 @@
     showToast('Log updated!', 'success');
   }
 
+  /* ── SELECTION & MODAL UTILS ── */
+  function clearSelection() {
+    $$('.log-row.is-selected').forEach(r => r.classList.remove('is-selected'));
+  }
+
+  function openEditLogModal(id) {
+    const log = state.logs.find(l => String(l.id) === String(id));
+    const logModal = $('#logModal');
+    const modalTitle = $('#logModalTitle');
+    const modalDate = $('#modalLogDate');
+    const modalText = $('#modalLogText');
+
+    if (!log || !logModal || !modalText) return;
+
+    editingLogId = String(id);
+    if (modalTitle) modalTitle.textContent = 'Edit Log';
+    if (modalDate) {
+      modalDate.value = log.dateStr || (log.createdAt ? dateStr(new Date(log.createdAt)) : todayStr());
+    }
+    modalText.value = log.text;
+    logModal.classList.add('open');
+    clearSelection();
+    setTimeout(() => { if (modalText) modalText.focus(); }, 200);
+  }
+
   function deleteLog(id) {
     if (!id) return;
     const idStr = String(id);
@@ -208,6 +233,7 @@
     state.deletedLogIds.push({ id: idStr, deletedAt: Date.now() });
 
     saveState();
+    clearSelection();
     renderLogs();
     showToast('Log deleted', 'info');
   }
@@ -222,6 +248,7 @@
     } else {
       fallbackCopy(text);
     }
+    clearSelection();
   }
 
   function fallbackCopy(text) {
@@ -315,7 +342,7 @@
         <div class="log-item-track">
           <div class="log-bubble-container">
             <div class="log-bubble"><div class="log-text">${formattedText}</div></div>
-            <div class="log-actions" onclick="event.stopPropagation()">
+            <div class="log-actions">
               <button type="button" class="log-action-btn" data-action="copy" data-id="${logId}" title="Copy" aria-label="Copy">📋</button>
               <button type="button" class="log-action-btn" data-action="edit" data-id="${logId}" title="Edit" aria-label="Edit">✏️</button>
               <button type="button" class="log-action-btn delete" data-action="delete" data-id="${logId}" title="Delete" aria-label="Delete">🗑️</button>
@@ -344,10 +371,6 @@
 
     const REVEAL_WIDTH = 75; // px to reveal timestamp
 
-    function clearSelection() {
-      $$('.log-row.is-selected').forEach(r => r.classList.remove('is-selected'));
-    }
-
     function clearOtherRevealed(exceptRow) {
       $$('.log-row.is-revealed').forEach(r => {
         if (r !== exceptRow) {
@@ -360,8 +383,8 @@
     function onPointerDown(e) {
       if (e.button !== undefined && e.button !== 0) return;
 
-      // Click on buttons or inputs should not trigger row drag
-      if (e.target.closest('button, a, input, textarea, .log-actions')) return;
+      // Click on buttons, inputs, or actions bar should not trigger row drag
+      if (e.target.closest('button, a, input, textarea, .log-actions, .log-action-btn')) return;
 
       const row = e.target.closest('.log-row');
       if (!row) {
@@ -482,31 +505,34 @@
 
     // Dismiss selection on click outside
     document.addEventListener('pointerdown', (e) => {
-      if (!e.target.closest('.log-row.is-selected')) {
+      if (!e.target.closest('.log-row.is-selected, .log-actions, .log-action-btn')) {
         clearSelection();
       }
     });
 
-    // Direct click handler for action buttons
+    // Direct click handler for action buttons & actions bar
     feed.addEventListener('click', (e) => {
-      const btn = e.target.closest('.log-action-btn');
-      if (!btn) return;
+      const actionsBar = e.target.closest('.log-actions');
+      if (actionsBar) {
+        e.preventDefault();
+        e.stopPropagation();
 
-      e.preventDefault();
-      e.stopPropagation();
+        const btn = e.target.closest('.log-action-btn');
+        if (!btn) return;
 
-      const action = btn.dataset.action;
-      const id = btn.dataset.id;
-      if (!id) return;
+        const action = btn.dataset.action;
+        const id = btn.dataset.id;
+        if (!id) return;
 
-      clearSelection();
-
-      if (action === 'delete') {
-        deleteLog(id);
-      } else if (action === 'edit') {
-        if (window.__editLog) window.__editLog(id, e);
-      } else if (action === 'copy') {
-        if (window.__copyLog) window.__copyLog(id, e);
+        if (action === 'delete') {
+          deleteLog(id);
+        } else if (action === 'edit') {
+          openEditLogModal(id);
+        } else if (action === 'copy') {
+          const log = state.logs.find(l => String(l.id) === String(id));
+          if (log) copyLog(log.text);
+        }
+        return;
       }
     });
 
@@ -612,7 +638,7 @@
       });
     }
 
-    // Global action dispatchers
+    // Global action dispatchers (for external/inline invocations)
     window.__copyLog = function (id, e) {
       if (e) {
         e.preventDefault();
@@ -620,7 +646,6 @@
       }
       const log = state.logs.find(l => String(l.id) === String(id));
       if (log) copyLog(log.text);
-      $$('.log-row.is-selected').forEach(r => r.classList.remove('is-selected'));
     };
 
     window.__editLog = function (id, e) {
@@ -628,18 +653,7 @@
         e.preventDefault();
         e.stopPropagation();
       }
-      const log = state.logs.find(l => String(l.id) === String(id));
-      if (!log || !logModal || !modalText) return;
-
-      editingLogId = String(id);
-      if (modalTitle) modalTitle.textContent = 'Edit Log';
-      if (modalDate) {
-        modalDate.value = log.dateStr || (log.createdAt ? dateStr(new Date(log.createdAt)) : todayStr());
-      }
-      modalText.value = log.text;
-      logModal.classList.add('open');
-      $$('.log-row.is-selected').forEach(r => r.classList.remove('is-selected'));
-      setTimeout(() => modalText.focus(), 200);
+      openEditLogModal(id);
     };
 
     window.__deleteLog = function (id, e) {
@@ -647,7 +661,6 @@
         e.preventDefault();
         e.stopPropagation();
       }
-      $$('.log-row.is-selected').forEach(r => r.classList.remove('is-selected'));
       deleteLog(id);
     };
   }
