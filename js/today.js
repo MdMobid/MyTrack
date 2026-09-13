@@ -155,10 +155,28 @@
   }
 
   /* ── DATA ── */
+  function isHabitPausedOnDate(habit, ds) {
+    if (!habit || !ds) return false;
+    if (Array.isArray(habit.pauseHistory) && habit.pauseHistory.length > 0) {
+      for (const period of habit.pauseHistory) {
+        if (!period || !period.from) continue;
+        if (period.to) {
+          if (ds >= period.from && ds < period.to) return true;
+        } else {
+          if (ds >= period.from) return true;
+        }
+      }
+    }
+    if (habit.isPaused) {
+      if (!habit.pausedAt || ds >= habit.pausedAt) return true;
+    }
+    return false;
+  }
+
   function getTodayHabits() {
     const todayIdx = getDayOfWeek(todayStr());
     const today = todayStr();
-    return habitState.habits.filter(h => !h.isPaused && h.days.includes(todayIdx) && !(habitState.completions[today] && habitState.completions[today][h.id]));
+    return habitState.habits.filter(h => !isHabitPausedOnDate(h, today) && h.days.includes(todayIdx) && !(habitState.completions[today] && habitState.completions[today][h.id]));
   }
 
   function isHabitCompletedToday(habitId) {
@@ -177,24 +195,33 @@
     if (!habit) return 0;
 
     const d = new Date();
-    if (habit.isPaused && habit.pausedAt) {
-      const pDate = new Date(habit.pausedAt + 'T00:00:00');
-      if (pDate <= d) d.setTime(pDate.getTime());
-    }
+    const today = todayStr();
+    const todayComp = habitState.completions[today] && habitState.completions[today][habitId];
+    const pausedToday = isHabitPausedOnDate(habit, today);
 
-    const todayComp = habitState.completions[todayStr()] || {};
-    if (!habit.isPaused && !todayComp[habitId]) {
+    if (!todayComp && !pausedToday) {
       d.setDate(d.getDate() - 1);
     }
 
-    while (true) {
+    const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+    while (d >= oneYearAgo) {
       const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       const dayIdx = d.getDay();
-      if (!habit.days.includes(dayIdx)) {
+
+      if (isHabitPausedOnDate(habit, ds)) {
+        const completions = habitState.completions[ds] || {};
+        if (completions[habitId]) {
+          streak++;
+        }
         d.setDate(d.getDate() - 1);
-        if (d < new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)) break;
         continue;
       }
+
+      if (!habit.days.includes(dayIdx)) {
+        d.setDate(d.getDate() - 1);
+        continue;
+      }
+
       const completions = habitState.completions[ds] || {};
       if (completions[habitId]) {
         streak++;
@@ -234,7 +261,7 @@
     const todayIdx = getDayOfWeek(today);
 
     const pendingHabits = getTodayHabits();
-    const allTodayHabits = habitState.habits.filter(h => !h.isPaused && h.days.includes(todayIdx));
+    const allTodayHabits = habitState.habits.filter(h => !isHabitPausedOnDate(h, today) && h.days.includes(todayIdx));
     const completedHabits = allTodayHabits.filter(h => isHabitCompletedToday(h.id));
 
     const pendingTodos = getTodayTodos();

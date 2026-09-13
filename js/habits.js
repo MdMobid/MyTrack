@@ -107,11 +107,41 @@
     return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
   }
 
-  function isHabitActiveOnDay(habit, dayIndex, ds) {
-    if (habit.isPaused) {
-      if (ds && habit.pausedAt && ds < habit.pausedAt) {
-        return habit.days.includes(dayIndex);
+  function isHabitPausedOnDate(habit, ds) {
+    if (!habit || !ds) return false;
+
+    // 1. Check historical & current pause intervals in pauseHistory
+    if (Array.isArray(habit.pauseHistory) && habit.pauseHistory.length > 0) {
+      for (const period of habit.pauseHistory) {
+        if (!period || !period.from) continue;
+        const from = period.from;
+        const to = period.to;
+        if (to) {
+          // Closed interval: paused from 'from' up to 'to' (exclusive of 'to', as 'to' is the day it was resumed)
+          if (ds >= from && ds < to) {
+            return true;
+          }
+        } else {
+          // Open interval: currently paused from 'from' onwards
+          if (ds >= from) {
+            return true;
+          }
+        }
       }
+    }
+
+    // 2. Fallback check for currently paused habit (e.g. legacy data with habit.isPaused and habit.pausedAt)
+    if (habit.isPaused) {
+      if (!habit.pausedAt || ds >= habit.pausedAt) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  function isHabitActiveOnDay(habit, dayIndex, ds) {
+    if (isHabitPausedOnDate(habit, ds)) {
       return false;
     }
     return habit.days.includes(dayIndex);
@@ -169,12 +199,25 @@
     }
   }
 
+  function normalizeHabits(habits) {
+    if (!Array.isArray(habits)) return [];
+    habits.forEach(h => {
+      if (!Array.isArray(h.pauseHistory)) {
+        h.pauseHistory = [];
+        if (h.isPaused && h.pausedAt) {
+          h.pauseHistory.push({ from: h.pausedAt, to: null });
+        }
+      }
+    });
+    return habits;
+  }
+
   function loadState() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const data = JSON.parse(raw);
-        state.habits = data.habits || [];
+        state.habits = normalizeHabits(data.habits || []);
         state.completions = data.completions || {};
         state.deletedHabitIds = data.deletedHabitIds || [];
       }
@@ -191,7 +234,7 @@
           remoteInfo
         );
 
-        state.habits = merged.habits || [];
+        state.habits = normalizeHabits(merged.habits || []);
         state.completions = merged.completions || {};
         state.deletedHabitIds = merged.deletedHabitIds || [];
 
@@ -282,28 +325,36 @@
     if (!habit) return 0;
 
     const d = new Date();
+    const today = todayStr();
+    const todayComp = (state.completions[today] || {})[habitId];
+    const pausedToday = isHabitPausedOnDate(habit, today);
 
-    // If habit is paused, start evaluating from pausedAt date backwards
-    if (habit.isPaused && habit.pausedAt) {
-      const pDate = new Date(habit.pausedAt + 'T00:00:00');
-      if (pDate <= d) {
-        d.setTime(pDate.getTime());
-      }
-    }
-
-    const todayComp = state.completions[todayStr()] || {};
-    if (!habit.isPaused && !todayComp[habitId]) {
+    // If not completed today and not paused today, streak count starts evaluating from yesterday
+    if (!todayComp && !pausedToday) {
       d.setDate(d.getDate() - 1);
     }
 
-    while (true) {
+    const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+    while (d >= oneYearAgo) {
       const ds = dateStr(d);
       const dayIdx = getDayOfWeek(ds);
-      if (!habit.days.includes(dayIdx)) {
+
+      // If habit was paused on this date: streak is frozen! Skip day without breaking streak.
+      if (isHabitPausedOnDate(habit, ds)) {
+        const completions = state.completions[ds] || {};
+        if (completions[habitId]) {
+          streak++;
+        }
         d.setDate(d.getDate() - 1);
-        if (d < new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)) break;
         continue;
       }
+
+      // If habit is not scheduled on this day of week, skip
+      if (!habit.days.includes(dayIdx)) {
+        d.setDate(d.getDate() - 1);
+        continue;
+      }
+
       const completions = state.completions[ds] || {};
       if (completions[habitId]) {
         streak++;
@@ -552,7 +603,7 @@
         const isToday = wd === today;
         const isFuture = wd > today;
         const isDone = !!(state.completions[wd] || {})[habit.id];
-        const isPausedOnDay = habit.isPaused && (!habit.pausedAt || wd >= habit.pausedAt);
+        const isPausedOnDay = isHabitPausedOnDate(habit, wd);
         let cellClass = 'weekly-cell';
         if (isToday) cellClass += ' today-cell';
         if (isFuture) cellClass += ' future';
@@ -826,12 +877,38 @@
   window.__togglePauseHabit = function (habitId) {
     const habit = state.habits.find(h => h.id === habitId);
     if (!habit) return;
-    habit.isPaused = !habit.isPaused;
-    habit.pausedAt = habit.isPaused ? todayStr() : null;
+
+    if (!Array.isArray(habit.pauseHistory)) {
+      habit.pauseHistory = [];
+    }
+
+    const today = todayStr();
+
+    if (!habit.isPaused) {
+      // Pause
+      habit.isPaused = true;
+      habit.pausedAt = today;
+      const last = habit.pauseHistory[habit.pauseHistory.length - 1];
+      if (!last || last.to !== null) {
+        habit.pauseHistory.push({ from: today, to: null });
+      }
+      showToast(`"${habit.name}" paused. Streak frozen!`, 'info');
+    } else {
+      // Resume / Unpause
+      habit.isPaused = false;
+      const openPeriod = habit.pauseHistory.find(p => p.to === null);
+      if (openPeriod) {
+        openPeriod.to = today;
+      } else if (habit.pausedAt) {
+        habit.pauseHistory.push({ from: habit.pausedAt, to: today });
+      }
+      habit.pausedAt = null;
+      showToast(`"${habit.name}" resumed!`, 'info');
+    }
+
     habit.updatedAt = Date.now();
     saveState();
     renderCurrentView();
-    showToast(habit.isPaused ? `"${habit.name}" paused. Streak frozen!` : `"${habit.name}" resumed!`, 'info');
   };
 
   window.__editHabit = function (habitId) {
@@ -913,6 +990,77 @@
       if (e.target === $('#habitModal')) closeModal();
     });
 
+    // ── Pause history controls ──────────────────────────────
+    const btnAddPeriod = $('#btnAddPausePeriod');
+    const newPeriodRow = $('#newPausePeriodRow');
+    const btnConfirmAdd = $('#btnConfirmAddPausePeriod');
+    const btnCancelAdd = $('#btnCancelAddPausePeriod');
+    const fromInput = $('#newPauseFrom');
+    const toInput = $('#newPauseTo');
+    const periodsList = $('#pausePeriodsList');
+
+    if (btnAddPeriod && newPeriodRow) {
+      btnAddPeriod.addEventListener('click', () => {
+        const isHidden = newPeriodRow.style.display === 'none';
+        newPeriodRow.style.display = isHidden ? 'block' : 'none';
+        if (isHidden) {
+          if (fromInput) fromInput.value = '';
+          if (toInput) toInput.value = '';
+        }
+      });
+    }
+
+    if (btnCancelAdd && newPeriodRow) {
+      btnCancelAdd.addEventListener('click', () => {
+        newPeriodRow.style.display = 'none';
+      });
+    }
+
+    if (btnConfirmAdd && fromInput && toInput) {
+      btnConfirmAdd.addEventListener('click', () => {
+        const fromVal = fromInput.value;
+        const toVal = toInput.value;
+        if (!fromVal) {
+          showToast('Please specify a start date', 'error');
+          return;
+        }
+        if (toVal && toVal <= fromVal) {
+          showToast('End date must be after start date', 'error');
+          return;
+        }
+
+        if (!Array.isArray(modalState.pauseHistory)) modalState.pauseHistory = [];
+        modalState.pauseHistory.push({ from: fromVal, to: toVal || null });
+        modalState.pauseHistory.sort((a, b) => a.from.localeCompare(b.from));
+
+        if (!toVal) {
+          const pausedToggle = $('#habitPausedToggle');
+          if (pausedToggle) pausedToggle.checked = true;
+        }
+
+        renderPauseHistoryUI();
+        if (newPeriodRow) newPeriodRow.style.display = 'none';
+        showToast('Pause period added', 'success');
+      });
+    }
+
+    if (periodsList) {
+      periodsList.addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn-remove-period');
+        if (!btn) return;
+        const idx = parseInt(btn.dataset.idx);
+        if (!isNaN(idx) && modalState.pauseHistory) {
+          const removed = modalState.pauseHistory.splice(idx, 1)[0];
+          if (removed && !removed.to) {
+            const pausedToggle = $('#habitPausedToggle');
+            if (pausedToggle) pausedToggle.checked = false;
+          }
+          renderPauseHistoryUI();
+          showToast('Period removed', 'info');
+        }
+      });
+    }
+
     // ── Settings modal ─────────────────────────────────────
     const btnSettings = document.getElementById('btnSettings');
     const settingsModal = document.getElementById('settingsModal');
@@ -983,7 +1131,7 @@
             try {
               const data = JSON.parse(evt.target.result);
               if (data.habits && data.completions) {
-                state.habits = data.habits;
+                state.habits = normalizeHabits(data.habits);
                 state.completions = data.completions;
                 state.deletedHabitIds = data.deletedHabitIds || [];
                 saveState();
@@ -1048,11 +1196,48 @@
     }
   }
 
+  function renderPauseHistoryUI() {
+    const container = $('#pauseHistoryContainer');
+    const list = $('#pausePeriodsList');
+    if (!container || !list) return;
+
+    if (!editingHabitId) {
+      container.style.display = 'none';
+      return;
+    }
+    container.style.display = 'block';
+
+    const periods = modalState.pauseHistory || [];
+    if (periods.length === 0) {
+      list.innerHTML = `<div style="font-size:0.75rem;color:var(--t3);font-style:italic;padding:4px 0;">No pause periods recorded yet.</div>`;
+      return;
+    }
+
+    list.innerHTML = periods.map((p, idx) => {
+      const fromFormatted = p.from;
+      const toFormatted = p.to ? p.to : 'Ongoing (Paused)';
+      const isOngoing = !p.to;
+      return `
+        <div class="pause-period-item ${isOngoing ? 'is-ongoing' : ''}">
+          <div>
+            <span style="color:${isOngoing ? '#fbbf24' : 'var(--cyan)'};margin-right:6px;">${isOngoing ? '⏸️' : '⏱️'}</span>
+            <span style="color:var(--t1);font-weight:600;">${fromFormatted}</span>
+            <span style="color:var(--t3);margin:0 6px;">➔</span>
+            <span style="color:${isOngoing ? '#fbbf24' : 'var(--t2)'};font-weight:500;">${toFormatted}</span>
+          </div>
+          <button type="button" class="btn-remove-period" data-idx="${idx}" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:0.85rem;padding:2px 6px;" title="Remove this period">✕</button>
+        </div>
+      `;
+    }).join('');
+  }
+
   function openModal(habit = null) {
     const modal = $('#habitModal');
     const emojiInput = $('#emojiInput');
     const emojiPreview = $('#emojiPreview');
     const pausedToggle = $('#habitPausedToggle');
+    const newPeriodRow = $('#newPausePeriodRow');
+    if (newPeriodRow) newPeriodRow.style.display = 'none';
 
     if (habit) {
       $('#modalTitle').textContent = 'Edit Habit';
@@ -1060,13 +1245,22 @@
       modalState.emoji = habit.emoji;
       modalState.color = habit.color;
       modalState.days = [...habit.days];
+      modalState.pauseHistory = Array.isArray(habit.pauseHistory) ? JSON.parse(JSON.stringify(habit.pauseHistory)) : [];
+      if (habit.isPaused && habit.pausedAt) {
+        const hasOpen = modalState.pauseHistory.some(p => p.to === null);
+        if (!hasOpen) {
+          modalState.pauseHistory.push({ from: habit.pausedAt, to: null });
+        }
+      }
       if (pausedToggle) pausedToggle.checked = !!habit.isPaused;
+      editingHabitId = habit.id;
     } else {
       $('#modalTitle').textContent = 'New Habit';
       $('#habitName').value = '';
       modalState.emoji = '💪';
       modalState.color = '#00d4ff';
       modalState.days = [0, 1, 2, 3, 4, 5, 6];
+      modalState.pauseHistory = [];
       if (pausedToggle) pausedToggle.checked = false;
       editingHabitId = null;
     }
@@ -1078,6 +1272,8 @@
     // Sync color & days UI
     $$('.color-picker__btn').forEach(b => b.classList.toggle('selected', b.dataset.color === modalState.color));
     $$('.days-selector__btn').forEach(b => b.classList.toggle('selected', modalState.days.includes(parseInt(b.dataset.day))));
+
+    renderPauseHistoryUI();
 
     modal.classList.add('open');
     setTimeout(() => $('#habitName').focus(), 300);
@@ -1103,6 +1299,8 @@
     modalState.emoji = finalEmoji;
     const isPaused = $('#habitPausedToggle') ? $('#habitPausedToggle').checked : false;
 
+    const today = todayStr();
+
     if (editingHabitId) {
       const habit = state.habits.find(h => h.id === editingHabitId);
       if (habit) {
@@ -1110,8 +1308,34 @@
         habit.emoji = modalState.emoji;
         habit.color = modalState.color;
         habit.days = [...modalState.days];
-        habit.isPaused = isPaused;
-        habit.pausedAt = isPaused ? (habit.pausedAt || todayStr()) : null;
+        habit.pauseHistory = Array.isArray(modalState.pauseHistory) ? [...modalState.pauseHistory] : [];
+
+        if (isPaused && !habit.isPaused) {
+          // Changed from unpaused to paused
+          habit.isPaused = true;
+          habit.pausedAt = today;
+          const openPeriod = habit.pauseHistory.find(p => p.to === null);
+          if (!openPeriod) {
+            habit.pauseHistory.push({ from: today, to: null });
+          }
+        } else if (!isPaused && habit.isPaused) {
+          // Changed from paused to unpaused / resumed
+          habit.isPaused = false;
+          const openPeriod = habit.pauseHistory.find(p => p.to === null);
+          if (openPeriod) {
+            openPeriod.to = today;
+          } else if (habit.pausedAt) {
+            habit.pauseHistory.push({ from: habit.pausedAt, to: today });
+          }
+          habit.pausedAt = null;
+        } else if (isPaused && habit.isPaused) {
+          // Still paused - ensure open period exists
+          const openPeriod = habit.pauseHistory.find(p => p.to === null);
+          if (!openPeriod) {
+            habit.pauseHistory.push({ from: habit.pausedAt || today, to: null });
+          }
+        }
+
         habit.updatedAt = Date.now();
       }
       showToast('Habit updated!', 'success');
@@ -1122,9 +1346,10 @@
         emoji: modalState.emoji,
         color: modalState.color,
         days: [...modalState.days],
-        createdAt: todayStr(),
+        createdAt: today,
         isPaused: isPaused,
-        pausedAt: isPaused ? todayStr() : null,
+        pausedAt: isPaused ? today : null,
+        pauseHistory: isPaused ? [{ from: today, to: null }] : [],
         updatedAt: Date.now(),
       });
       showToast('Habit created!', 'success');

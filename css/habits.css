@@ -1791,3 +1791,34 @@ input:checked+.slider:before {
   transform: translateX(20px);
   background-color: #fff;
 }
+
+/* ── Pause History Styles ───────────────────────────────── */
+.pause-history-container {
+  background: var(--bg-deep);
+  border-radius: var(--r-sm);
+  padding: 12px 14px;
+  box-shadow: var(--neu-in-sm);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.pause-period-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  margin-bottom: 5px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  font-size: 0.78rem;
+  transition: background 0.15s ease;
+}
+
+.pause-period-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.pause-period-item.is-ongoing {
+  border-color: rgba(251, 191, 36, 0.35);
+  background: rgba(251, 191, 36, 0.06);
+}

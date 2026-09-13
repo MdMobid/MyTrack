@@ -169,6 +169,30 @@
         </div>
       </div>
 
+      <div class="pause-history-container" id="pauseHistoryContainer" style="display:none;margin-top:12px;">
+        <div class="pause-history-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <span style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--t2);">Pause History (Excluded from score)</span>
+          <button type="button" id="btnAddPausePeriod" class="btn-text-action" style="font-size:0.76rem;color:var(--cyan);background:none;border:none;cursor:pointer;padding:2px 6px;font-weight:600;">+ Add Period</button>
+        </div>
+        <div id="pausePeriodsList" class="pause-periods-list"></div>
+        <div id="newPausePeriodRow" style="display:none;margin-top:8px;padding:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;">
+          <div style="display:flex;gap:8px;align-items:center;">
+            <div style="flex:1;">
+              <label style="font-size:0.7rem;color:var(--t3);display:block;margin-bottom:2px;">From (Paused)</label>
+              <input type="date" id="newPauseFrom" class="modal__input" style="padding:4px 8px;font-size:0.8rem;height:34px;">
+            </div>
+            <div style="flex:1;">
+              <label style="font-size:0.7rem;color:var(--t3);display:block;margin-bottom:2px;">To (Resumed)</label>
+              <input type="date" id="newPauseTo" class="modal__input" style="padding:4px 8px;font-size:0.8rem;height:34px;">
+            </div>
+            <div style="display:flex;gap:4px;align-self:flex-end;">
+              <button type="button" id="btnConfirmAddPausePeriod" class="modal__btn" style="padding:6px 10px;font-size:0.78rem;background:var(--grad-primary);height:34px;">Add</button>
+              <button type="button" id="btnCancelAddPausePeriod" class="modal__btn" style="padding:6px 8px;font-size:0.78rem;background:rgba(255,255,255,0.06);height:34px;">✕</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="modal__actions">
         <button class="modal__btn modal__btn--cancel" id="modalCancel">Cancel</button>
         <button class="modal__btn modal__btn--primary" id="modalSave" style="background:var(--grad-primary);">Save
