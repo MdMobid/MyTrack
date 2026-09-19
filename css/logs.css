@@ -281,19 +281,82 @@
   gap: 8px;
 }
 
-.log-card__meta {
-  display: flex;
+.log-drag-handle {
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.75rem;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-xs);
   color: var(--t3);
-  font-weight: 600;
-  font-family: 'Outfit', sans-serif;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  transition: all 0.18s var(--ease);
 }
 
-.log-card__time-icon {
-  font-size: 0.8rem;
-  opacity: 0.8;
+.log-drag-handle:hover {
+  color: var(--cyan);
+  background: var(--bg-deep);
+  box-shadow: var(--neu-in-xs);
+}
+
+.log-drag-handle:active {
+  cursor: grabbing;
+}
+
+.log-drag-icon {
+  font-size: 1.15rem;
+  line-height: 1;
+  opacity: 0.75;
+  transition: opacity 0.18s;
+}
+
+.log-drag-handle:hover .log-drag-icon {
+  opacity: 1;
+}
+
+.log-card[draggable="true"] {
+  cursor: default;
+}
+
+.log-card.is-dragging {
+  opacity: 0.35 !important;
+  transform: scale(0.98);
+  border: 1px dashed var(--cyan) !important;
+  box-shadow: none !important;
+}
+
+.log-card.drag-over-top {
+  border-top: 2px solid var(--cyan) !important;
+  box-shadow: 0 -4px 14px var(--cyan-dim) !important;
+}
+
+.log-card.drag-over-bottom {
+  border-bottom: 2px solid var(--cyan) !important;
+  box-shadow: 0 4px 14px var(--cyan-dim) !important;
+}
+
+.log-day-group.drag-over-group {
+  background: rgba(0, 212, 255, 0.04);
+  border-radius: var(--r-sm);
+  outline: 1px dashed rgba(0, 212, 255, 0.4);
+}
+
+.log-card-touch-ghost {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.92;
+  transform: scale(1.02);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), 0 0 16px var(--cyan-dim);
+  border: 1px solid var(--cyan);
+  background: var(--bg);
+  border-radius: var(--r-sm);
+  padding: 12px 16px;
+  max-width: 90vw;
+  box-sizing: border-box;
+  transition: none;
 }
 
 .log-card__actions {
@@ -442,8 +505,13 @@ input[type="date"].modal__input {
     line-height: 1.5;
   }
 
-  .log-card__meta {
-    font-size: 0.72rem;
+  .log-drag-handle {
+    width: 32px;
+    height: 32px;
+  }
+
+  .log-drag-icon {
+    font-size: 1.25rem;
   }
 
   .log-action-btn {

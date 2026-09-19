@@ -4,6 +4,7 @@
   /* ── CONSTANTS & STORAGE KEYS ── */
   const STORAGE_KEY = 'mytrack_logs';
   const DELETED_KEY = 'mytrack_logs_deleted';
+  const ORDERED_KEY = 'mytrack_logs_ordered';
 
   /* ── STATE ── */
   const state = {
@@ -53,10 +54,6 @@
     return dateStr(startOfWeek);
   }
 
-  function formatTime(d = new Date()) {
-    return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
-  }
-
   function formatDayBadge(ds) {
     if (ds === todayStr()) return 'Today';
     if (ds === yesterdayStr()) return 'Yesterday';
@@ -78,7 +75,7 @@
   }
 
   /* ── TOAST NOTIFICATIONS ── */
-  function showToast(msg, type = 'info', dur = 2800) {
+  function showToast(msg, type = 'info', dur = 2200) {
     const cont = $('#toastContainer');
     if (!cont) return;
     const icons = { success: '✓', error: '✕', info: 'ℹ' };
@@ -114,6 +111,14 @@
       if (del) state.deletedLogIds = JSON.parse(del);
     } catch (e) {
       console.warn('Failed to load local logs:', e);
+    }
+
+    // Preserve initial chronological order on very first run before any manual dragging
+    const hasOrderFlag = localStorage.getItem(ORDERED_KEY);
+    if (!hasOrderFlag && state.logs.length > 0) {
+      state.logs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      localStorage.setItem(ORDERED_KEY, 'true');
+      saveState();
     }
 
     if (window.db) {
@@ -163,11 +168,11 @@
       text: trimmed,
       createdAt: timestamp,
       dateStr: ds,
-      timeStr: formatTime(now),
       updatedAt: Date.now()
     };
 
     state.logs.unshift(newLog);
+    localStorage.setItem(ORDERED_KEY, 'true');
     saveState();
     renderLogs();
 
@@ -272,6 +277,71 @@
     setTimeout(() => { if (modalText) modalText.focus(); }, 200);
   }
 
+  /* ── REORDERING LOGIC ── */
+  function reorderLogs(sourceId, targetId, insertBefore, targetDate) {
+    if (!sourceId || !targetId || sourceId === targetId) return;
+
+    const sourceIdx = state.logs.findIndex(l => String(l.id) === String(sourceId));
+    if (sourceIdx === -1) return;
+
+    const [sourceLog] = state.logs.splice(sourceIdx, 1);
+
+    // If moved into a different day group, update its dateStr
+    if (targetDate && sourceLog.dateStr !== targetDate) {
+      sourceLog.dateStr = targetDate;
+      const [y, m, d] = targetDate.split('-').map(Number);
+      const prevDate = sourceLog.createdAt ? new Date(sourceLog.createdAt) : new Date();
+      const newDate = new Date(y, m - 1, d, prevDate.getHours(), prevDate.getMinutes(), prevDate.getSeconds());
+      sourceLog.createdAt = newDate.getTime();
+      sourceLog.updatedAt = Date.now();
+    }
+
+    const targetIdx = state.logs.findIndex(l => String(l.id) === String(targetId));
+    if (targetIdx === -1) {
+      state.logs.push(sourceLog);
+    } else {
+      const insertIdx = insertBefore ? targetIdx : targetIdx + 1;
+      state.logs.splice(insertIdx, 0, sourceLog);
+    }
+
+    localStorage.setItem(ORDERED_KEY, 'true');
+    saveState();
+    renderLogs();
+    showToast('Logs reordered', 'success', 1200);
+  }
+
+  function moveLogToDate(sourceId, targetDate) {
+    if (!sourceId || !targetDate) return;
+    const sourceIdx = state.logs.findIndex(l => String(l.id) === String(sourceId));
+    if (sourceIdx === -1) return;
+
+    const [sourceLog] = state.logs.splice(sourceIdx, 1);
+    sourceLog.dateStr = targetDate;
+    const [y, m, d] = targetDate.split('-').map(Number);
+    const prevDate = sourceLog.createdAt ? new Date(sourceLog.createdAt) : new Date();
+    const newDate = new Date(y, m - 1, d, prevDate.getHours(), prevDate.getMinutes(), prevDate.getSeconds());
+    sourceLog.createdAt = newDate.getTime();
+    sourceLog.updatedAt = Date.now();
+
+    // Insert at beginning of that date in state.logs
+    const firstOfDateIdx = state.logs.findIndex(l => (l.dateStr || dateStr(new Date(l.createdAt))) === targetDate);
+    if (firstOfDateIdx !== -1) {
+      state.logs.splice(firstOfDateIdx, 0, sourceLog);
+    } else {
+      let insertIdx = state.logs.findIndex(l => {
+        const ds = l.dateStr || dateStr(new Date(l.createdAt));
+        return targetDate.localeCompare(ds) > 0;
+      });
+      if (insertIdx === -1) insertIdx = state.logs.length;
+      state.logs.splice(insertIdx, 0, sourceLog);
+    }
+
+    localStorage.setItem(ORDERED_KEY, 'true');
+    saveState();
+    renderLogs();
+    showToast('Log moved to ' + formatDayBadge(targetDate), 'success', 1200);
+  }
+
   /* ── FILTER & SEARCH LOGIC ── */
   function isDateFilterActive() {
     return Boolean(dateFilter.from || dateFilter.to || (dateFilter.preset && dateFilter.preset !== 'all'));
@@ -360,7 +430,7 @@
         <div class="logs-empty">
           <div class="logs-empty__icon">📝</div>
           <h3 class="logs-empty__title">Your Daily Logbook</h3>
-          <p class="logs-empty__text">Capture your thoughts, activities, and reflections. Every entry records the exact time and day automatically!</p>
+          <p class="logs-empty__text">Capture your thoughts, activities, and reflections. Reorder entries anytime by dragging them!</p>
         </div>
       `;
       return;
@@ -377,7 +447,7 @@
       return;
     }
 
-    // Group logs by dateStr
+    // Group logs by dateStr while preserving custom sequence
     const groups = {};
     logs.forEach(log => {
       const ds = log.dateStr || (log.createdAt ? dateStr(new Date(log.createdAt)) : todayStr());
@@ -390,8 +460,8 @@
 
     let html = '';
     sortedDates.forEach(ds => {
-      // Sort logs within day descending: latest log at top
-      const dayLogs = groups[ds].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      // Custom order within day is preserved
+      const dayLogs = groups[ds];
       const isToday = ds === todayStr();
       const badgeText = formatDayBadge(ds);
 
@@ -410,15 +480,13 @@
 
   function renderLogRow(log) {
     const formattedText = formatLogText(log.text);
-    const time = log.timeStr || (log.createdAt ? formatTime(new Date(log.createdAt)) : '');
     const logId = String(log.id);
 
     return `
-      <div class="log-card" id="row-${logId}" data-id="${logId}">
+      <div class="log-card" id="row-${logId}" data-id="${logId}" draggable="true">
         <div class="log-card__header">
-          <div class="log-card__meta">
-            <span class="log-card__time-icon">🕒</span>
-            <span>${time}</span>
+          <div class="log-drag-handle" title="Drag to reorder" aria-label="Drag to reorder">
+            <span class="log-drag-icon">⠿</span>
           </div>
           <div class="log-card__actions">
             <button type="button" class="log-action-btn" data-action="copy" data-id="${logId}" title="Copy" aria-label="Copy">📋</button>
@@ -456,6 +524,195 @@
         if (log) copyLog(log.text);
       }
     });
+  }
+
+  /* ── DESKTOP DRAG & DROP ENGINE ── */
+  function initDesktopDrag() {
+    const feed = $('#logsFeed');
+    if (!feed) return;
+
+    let draggedId = null;
+
+    feed.addEventListener('dragstart', (e) => {
+      const card = e.target.closest('.log-card');
+      if (!card) return;
+
+      // Don't drag if clicking buttons or links
+      if (e.target.closest('.log-action-btn, button, a, input, textarea')) {
+        e.preventDefault();
+        return;
+      }
+
+      draggedId = card.dataset.id;
+      card.classList.add('is-dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', draggedId);
+    });
+
+    feed.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+
+      const targetCard = e.target.closest('.log-card');
+      if (!targetCard || targetCard.dataset.id === draggedId) return;
+
+      const rect = targetCard.getBoundingClientRect();
+      const isTop = e.clientY < rect.top + rect.height / 2;
+
+      targetCard.classList.toggle('drag-over-top', isTop);
+      targetCard.classList.toggle('drag-over-bottom', !isTop);
+    });
+
+    feed.addEventListener('dragleave', (e) => {
+      const targetCard = e.target.closest('.log-card');
+      if (targetCard) {
+        targetCard.classList.remove('drag-over-top', 'drag-over-bottom');
+      }
+    });
+
+    feed.addEventListener('drop', (e) => {
+      e.preventDefault();
+
+      const targetCard = e.target.closest('.log-card');
+      const targetGroup = e.target.closest('.log-day-group');
+      const targetDate = targetGroup ? targetGroup.dataset.date : null;
+
+      if (targetCard && draggedId && targetCard.dataset.id !== draggedId) {
+        const rect = targetCard.getBoundingClientRect();
+        const insertBefore = e.clientY < rect.top + rect.height / 2;
+        reorderLogs(draggedId, targetCard.dataset.id, insertBefore, targetDate);
+      } else if (targetGroup && draggedId) {
+        moveLogToDate(draggedId, targetDate);
+      }
+
+      cleanupDragState();
+    });
+
+    feed.addEventListener('dragend', () => {
+      cleanupDragState();
+    });
+
+    function cleanupDragState() {
+      draggedId = null;
+      $$('.is-dragging, .drag-over-top, .drag-over-bottom, .drag-over-group').forEach(el => {
+        el.classList.remove('is-dragging', 'drag-over-top', 'drag-over-bottom', 'drag-over-group');
+      });
+    }
+  }
+
+  /* ── TOUCH & POINTER DRAG & DROP ENGINE (MOBILE) ── */
+  function initTouchDrag() {
+    const feed = $('#logsFeed');
+    if (!feed) return;
+
+    let touchCard = null;
+    let touchSourceId = null;
+    let initialY = 0;
+    let initialX = 0;
+    let isTouchDragging = false;
+    let ghostEl = null;
+
+    feed.addEventListener('pointerdown', (e) => {
+      // Desktop mouse uses native HTML5 drag
+      if (e.pointerType === 'mouse') return;
+
+      const handle = e.target.closest('.log-drag-handle');
+      if (!handle) return;
+
+      const card = handle.closest('.log-card');
+      if (!card) return;
+
+      touchCard = card;
+      touchSourceId = card.dataset.id;
+      initialX = e.clientX;
+      initialY = e.clientY;
+      isTouchDragging = false;
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      if (!touchCard) return;
+
+      const dy = e.clientY - initialY;
+      const dx = e.clientX - initialX;
+
+      if (!isTouchDragging) {
+        if (Math.abs(dy) > 6 || Math.abs(dx) > 6) {
+          isTouchDragging = true;
+          touchCard.classList.add('is-dragging');
+
+          ghostEl = touchCard.cloneNode(true);
+          ghostEl.classList.add('log-card-touch-ghost');
+          ghostEl.style.width = `${touchCard.offsetWidth}px`;
+          ghostEl.style.left = `${touchCard.getBoundingClientRect().left}px`;
+          ghostEl.style.top = `${e.clientY - 20}px`;
+          document.body.appendChild(ghostEl);
+        }
+      }
+
+      if (isTouchDragging && ghostEl) {
+        if (e.cancelable) e.preventDefault();
+        ghostEl.style.top = `${e.clientY - 20}px`;
+
+        $$('.drag-over-top, .drag-over-bottom, .drag-over-group').forEach(el => {
+          el.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-over-group');
+        });
+
+        ghostEl.style.display = 'none';
+        const elUnder = document.elementFromPoint(e.clientX, e.clientY);
+        ghostEl.style.display = 'flex';
+
+        if (elUnder) {
+          const targetCard = elUnder.closest('.log-card');
+          if (targetCard && targetCard !== touchCard) {
+            const rect = targetCard.getBoundingClientRect();
+            const isTop = e.clientY < rect.top + rect.height / 2;
+            targetCard.classList.toggle('drag-over-top', isTop);
+            targetCard.classList.toggle('drag-over-bottom', !isTop);
+          }
+        }
+      }
+    }, { passive: false });
+
+    function finishTouchDrag(e) {
+      if (!touchCard) return;
+
+      if (isTouchDragging && ghostEl) {
+        ghostEl.style.display = 'none';
+        const elUnder = document.elementFromPoint(e.clientX, e.clientY);
+        if (ghostEl.parentNode) ghostEl.parentNode.removeChild(ghostEl);
+        ghostEl = null;
+
+        if (elUnder) {
+          const targetCard = elUnder.closest('.log-card');
+          if (targetCard && targetCard !== touchCard) {
+            const rect = targetCard.getBoundingClientRect();
+            const insertBefore = e.clientY < rect.top + rect.height / 2;
+            const targetGroup = targetCard.closest('.log-day-group');
+            const targetDate = targetGroup ? targetGroup.dataset.date : null;
+            reorderLogs(touchSourceId, targetCard.dataset.id, insertBefore, targetDate);
+          } else {
+            const targetGroup = elUnder.closest('.log-day-group');
+            if (targetGroup) {
+              const targetDate = targetGroup.dataset.date;
+              moveLogToDate(touchSourceId, targetDate);
+            }
+          }
+        }
+      }
+
+      if (touchCard) {
+        touchCard.classList.remove('is-dragging');
+        touchCard = null;
+      }
+      touchSourceId = null;
+      isTouchDragging = false;
+      $$('.drag-over-top, .drag-over-bottom, .drag-over-group').forEach(el => {
+        el.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-over-group');
+      });
+    }
+
+    window.addEventListener('pointerup', finishTouchDrag);
+    window.addEventListener('pointercancel', finishTouchDrag);
   }
 
   /* ── INPUT & MODAL LISTENERS ── */
@@ -722,6 +979,8 @@
     loadState();
     renderLogs();
     initFeedInteractions();
+    initDesktopDrag();
+    initTouchDrag();
     initInputAndEvents();
   }
 
