@@ -103,6 +103,40 @@
     }
   }
 
+  /* ── PARAMETER NORMALIZATION FOR PREVIOUS LOGS ── */
+  function ensureLogParameters() {
+    let modified = false;
+
+    // 1. Ensure dateStr is defined on every log
+    state.logs.forEach(log => {
+      if (!log.dateStr) {
+        log.dateStr = log.createdAt ? dateStr(new Date(log.createdAt)) : todayStr();
+        modified = true;
+      }
+    });
+
+    // 2. Ensure order parameter is defined on every log
+    const anyMissingOrder = state.logs.some(log => typeof log.order !== 'number');
+    const hasOrderFlag = localStorage.getItem(ORDERED_KEY);
+
+    if (anyMissingOrder || !hasOrderFlag) {
+      // Sort existing logs chronological descending first
+      state.logs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      state.logs.forEach((log, idx) => {
+        log.order = idx;
+      });
+      localStorage.setItem(ORDERED_KEY, 'true');
+      modified = true;
+    } else {
+      // Normalize sorting by order
+      state.logs.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    }
+
+    if (modified) {
+      saveState();
+    }
+  }
+
   function loadState() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -113,13 +147,7 @@
       console.warn('Failed to load local logs:', e);
     }
 
-    // Preserve initial chronological order on very first run before any manual dragging
-    const hasOrderFlag = localStorage.getItem(ORDERED_KEY);
-    if (!hasOrderFlag && state.logs.length > 0) {
-      state.logs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-      localStorage.setItem(ORDERED_KEY, 'true');
-      saveState();
-    }
+    ensureLogParameters();
 
     if (window.db) {
       window.db.registerSyncHandler('logs_state', async (remote) => {
@@ -130,6 +158,8 @@
         );
         state.logs = merged.logs || [];
         state.deletedLogIds = merged.deletedLogIds || [];
+
+        ensureLogParameters();
 
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state.logs));
         localStorage.setItem(DELETED_KEY, JSON.stringify(state.deletedLogIds));
@@ -168,10 +198,15 @@
       text: trimmed,
       createdAt: timestamp,
       dateStr: ds,
+      order: 0,
       updatedAt: Date.now()
     };
 
     state.logs.unshift(newLog);
+    state.logs.forEach((log, idx) => {
+      log.order = idx;
+    });
+
     localStorage.setItem(ORDERED_KEY, 'true');
     saveState();
     renderLogs();
@@ -224,6 +259,10 @@
     state.logs.splice(logIndex, 1);
     if (!state.deletedLogIds) state.deletedLogIds = [];
     state.deletedLogIds.push({ id: idStr, deletedAt: Date.now() });
+
+    state.logs.forEach((log, idx) => {
+      log.order = idx;
+    });
 
     saveState();
     renderLogs();
@@ -304,6 +343,12 @@
       state.logs.splice(insertIdx, 0, sourceLog);
     }
 
+    // Re-index all orders permanently
+    state.logs.forEach((log, idx) => {
+      log.order = idx;
+      log.updatedAt = Date.now();
+    });
+
     localStorage.setItem(ORDERED_KEY, 'true');
     saveState();
     renderLogs();
@@ -335,6 +380,12 @@
       if (insertIdx === -1) insertIdx = state.logs.length;
       state.logs.splice(insertIdx, 0, sourceLog);
     }
+
+    // Re-index all orders permanently
+    state.logs.forEach((log, idx) => {
+      log.order = idx;
+      log.updatedAt = Date.now();
+    });
 
     localStorage.setItem(ORDERED_KEY, 'true');
     saveState();
@@ -392,7 +443,7 @@
     let list = state.logs;
 
     if (dateFilter.from && !dateFilter.to) {
-      // User rule: if from date is selected only, then show for that day only
+      // If from date is selected only, then show for that day only
       list = list.filter(l => {
         const ds = l.dateStr || (l.createdAt ? dateStr(new Date(l.createdAt)) : '');
         return ds === dateFilter.from;
@@ -447,7 +498,7 @@
       return;
     }
 
-    // Group logs by dateStr while preserving custom sequence
+    // Group logs by dateStr
     const groups = {};
     logs.forEach(log => {
       const ds = log.dateStr || (log.createdAt ? dateStr(new Date(log.createdAt)) : todayStr());
@@ -460,8 +511,8 @@
 
     let html = '';
     sortedDates.forEach(ds => {
-      // Custom order within day is preserved
-      const dayLogs = groups[ds];
+      // Sort within each day group strictly by custom order parameter!
+      const dayLogs = groups[ds].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
       const isToday = ds === todayStr();
       const badgeText = formatDayBadge(ds);
 
@@ -526,27 +577,146 @@
     });
   }
 
-  /* ── DESKTOP DRAG & DROP ENGINE ── */
-  function initDesktopDrag() {
+  /* ── UNIFIED DRAG & DROP CONTROLLER (MOUSE & TOUCH) ── */
+  function initDragAndDrop() {
     const feed = $('#logsFeed');
     if (!feed) return;
 
-    let draggedId = null;
+    let activeDrag = null;
 
-    feed.addEventListener('dragstart', (e) => {
-      const card = e.target.closest('.log-card');
+    // 1. Pointer Events for Drag Handle (Works for Touch on Mobile AND Click on Desktop Handle)
+    feed.addEventListener('pointerdown', (e) => {
+      if (e.button !== undefined && e.button !== 0) return;
+      const handle = e.target.closest('.log-drag-handle');
+      if (!handle) return;
+
+      const card = handle.closest('.log-card');
       if (!card) return;
 
-      // Don't drag if clicking buttons or links
-      if (e.target.closest('.log-action-btn, button, a, input, textarea')) {
+      const sourceId = card.dataset.id;
+      if (!sourceId) return;
+
+      activeDrag = {
+        card,
+        sourceId,
+        startX: e.clientX,
+        startY: e.clientY,
+        pointerId: e.pointerId,
+        isDragging: false,
+        ghostEl: null
+      };
+
+      try {
+        handle.setPointerCapture(e.pointerId);
+      } catch (err) { }
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      if (!activeDrag) return;
+
+      const dy = e.clientY - activeDrag.startY;
+      const dx = e.clientX - activeDrag.startX;
+
+      if (!activeDrag.isDragging) {
+        if (Math.abs(dy) > 4 || Math.abs(dx) > 4) {
+          activeDrag.isDragging = true;
+          activeDrag.card.classList.add('is-dragging');
+
+          const ghost = activeDrag.card.cloneNode(true);
+          ghost.classList.add('log-card-touch-ghost');
+          ghost.style.width = `${activeDrag.card.offsetWidth}px`;
+          ghost.style.left = `${activeDrag.card.getBoundingClientRect().left}px`;
+          ghost.style.top = `${e.clientY - 24}px`;
+          document.body.appendChild(ghost);
+          activeDrag.ghostEl = ghost;
+        }
+      }
+
+      if (activeDrag.isDragging && activeDrag.ghostEl) {
+        if (e.cancelable) e.preventDefault();
+        activeDrag.ghostEl.style.top = `${e.clientY - 24}px`;
+
+        $$('.drag-over-top, .drag-over-bottom, .drag-over-group').forEach(el => {
+          el.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-over-group');
+        });
+
+        const elUnder = document.elementFromPoint(e.clientX, e.clientY);
+        if (elUnder) {
+          const targetCard = elUnder.closest('.log-card');
+          if (targetCard && targetCard !== activeDrag.card) {
+            const rect = targetCard.getBoundingClientRect();
+            const isTop = e.clientY < rect.top + rect.height / 2;
+            targetCard.classList.toggle('drag-over-top', isTop);
+            targetCard.classList.toggle('drag-over-bottom', !isTop);
+          } else {
+            const targetGroup = elUnder.closest('.log-day-group');
+            if (targetGroup) {
+              targetGroup.classList.add('drag-over-group');
+            }
+          }
+        }
+      }
+    }, { passive: false });
+
+    function handlePointerUp(e) {
+      if (!activeDrag) return;
+
+      const drag = activeDrag;
+      activeDrag = null;
+
+      if (drag.isDragging && drag.ghostEl) {
+        const elUnder = document.elementFromPoint(e.clientX, e.clientY);
+        if (drag.ghostEl.parentNode) drag.ghostEl.parentNode.removeChild(drag.ghostEl);
+
+        if (elUnder) {
+          const targetCard = elUnder.closest('.log-card');
+          if (targetCard && targetCard !== drag.card) {
+            const rect = targetCard.getBoundingClientRect();
+            const insertBefore = e.clientY < rect.top + rect.height / 2;
+            const targetGroup = targetCard.closest('.log-day-group');
+            const targetDate = targetGroup ? targetGroup.dataset.date : null;
+            reorderLogs(drag.sourceId, targetCard.dataset.id, insertBefore, targetDate);
+          } else {
+            const targetGroup = elUnder.closest('.log-day-group');
+            if (targetGroup) {
+              const targetDate = targetGroup.dataset.date;
+              moveLogToDate(drag.sourceId, targetDate);
+            }
+          }
+        }
+      }
+
+      if (drag.card) {
+        drag.card.classList.remove('is-dragging');
+      }
+
+      $$('.drag-over-top, .drag-over-bottom, .drag-over-group').forEach(el => {
+        el.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-over-group');
+      });
+    }
+
+    window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('pointercancel', handlePointerUp);
+
+    // 2. Desktop Native HTML5 Drag as Secondary on Card Body
+    let html5DraggedId = null;
+
+    feed.addEventListener('dragstart', (e) => {
+      if (activeDrag && activeDrag.isDragging) {
         e.preventDefault();
         return;
       }
 
-      draggedId = card.dataset.id;
+      const card = e.target.closest('.log-card');
+      if (!card || e.target.closest('.log-action-btn, button, a, input, textarea')) {
+        e.preventDefault();
+        return;
+      }
+
+      html5DraggedId = card.dataset.id;
       card.classList.add('is-dragging');
       e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/plain', draggedId);
+      e.dataTransfer.setData('text/plain', html5DraggedId);
     });
 
     feed.addEventListener('dragover', (e) => {
@@ -554,7 +724,7 @@
       e.dataTransfer.dropEffect = 'move';
 
       const targetCard = e.target.closest('.log-card');
-      if (!targetCard || targetCard.dataset.id === draggedId) return;
+      if (!targetCard || targetCard.dataset.id === html5DraggedId) return;
 
       const rect = targetCard.getBoundingClientRect();
       const isTop = e.clientY < rect.top + rect.height / 2;
@@ -574,145 +744,28 @@
       e.preventDefault();
 
       const targetCard = e.target.closest('.log-card');
-      const targetGroup = e.target.closest('.log-day-group');
+      const targetGroup = targetCard ? targetCard.closest('.log-day-group') : e.target.closest('.log-day-group');
       const targetDate = targetGroup ? targetGroup.dataset.date : null;
 
-      if (targetCard && draggedId && targetCard.dataset.id !== draggedId) {
+      if (targetCard && html5DraggedId && targetCard.dataset.id !== html5DraggedId) {
         const rect = targetCard.getBoundingClientRect();
         const insertBefore = e.clientY < rect.top + rect.height / 2;
-        reorderLogs(draggedId, targetCard.dataset.id, insertBefore, targetDate);
-      } else if (targetGroup && draggedId) {
-        moveLogToDate(draggedId, targetDate);
+        reorderLogs(html5DraggedId, targetCard.dataset.id, insertBefore, targetDate);
+      } else if (targetGroup && html5DraggedId) {
+        moveLogToDate(html5DraggedId, targetDate);
       }
 
-      cleanupDragState();
+      cleanupHtml5Drag();
     });
 
-    feed.addEventListener('dragend', () => {
-      cleanupDragState();
-    });
+    feed.addEventListener('dragend', cleanupHtml5Drag);
 
-    function cleanupDragState() {
-      draggedId = null;
+    function cleanupHtml5Drag() {
+      html5DraggedId = null;
       $$('.is-dragging, .drag-over-top, .drag-over-bottom, .drag-over-group').forEach(el => {
         el.classList.remove('is-dragging', 'drag-over-top', 'drag-over-bottom', 'drag-over-group');
       });
     }
-  }
-
-  /* ── TOUCH & POINTER DRAG & DROP ENGINE (MOBILE) ── */
-  function initTouchDrag() {
-    const feed = $('#logsFeed');
-    if (!feed) return;
-
-    let touchCard = null;
-    let touchSourceId = null;
-    let initialY = 0;
-    let initialX = 0;
-    let isTouchDragging = false;
-    let ghostEl = null;
-
-    feed.addEventListener('pointerdown', (e) => {
-      // Desktop mouse uses native HTML5 drag
-      if (e.pointerType === 'mouse') return;
-
-      const handle = e.target.closest('.log-drag-handle');
-      if (!handle) return;
-
-      const card = handle.closest('.log-card');
-      if (!card) return;
-
-      touchCard = card;
-      touchSourceId = card.dataset.id;
-      initialX = e.clientX;
-      initialY = e.clientY;
-      isTouchDragging = false;
-    });
-
-    window.addEventListener('pointermove', (e) => {
-      if (!touchCard) return;
-
-      const dy = e.clientY - initialY;
-      const dx = e.clientX - initialX;
-
-      if (!isTouchDragging) {
-        if (Math.abs(dy) > 6 || Math.abs(dx) > 6) {
-          isTouchDragging = true;
-          touchCard.classList.add('is-dragging');
-
-          ghostEl = touchCard.cloneNode(true);
-          ghostEl.classList.add('log-card-touch-ghost');
-          ghostEl.style.width = `${touchCard.offsetWidth}px`;
-          ghostEl.style.left = `${touchCard.getBoundingClientRect().left}px`;
-          ghostEl.style.top = `${e.clientY - 20}px`;
-          document.body.appendChild(ghostEl);
-        }
-      }
-
-      if (isTouchDragging && ghostEl) {
-        if (e.cancelable) e.preventDefault();
-        ghostEl.style.top = `${e.clientY - 20}px`;
-
-        $$('.drag-over-top, .drag-over-bottom, .drag-over-group').forEach(el => {
-          el.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-over-group');
-        });
-
-        ghostEl.style.display = 'none';
-        const elUnder = document.elementFromPoint(e.clientX, e.clientY);
-        ghostEl.style.display = 'flex';
-
-        if (elUnder) {
-          const targetCard = elUnder.closest('.log-card');
-          if (targetCard && targetCard !== touchCard) {
-            const rect = targetCard.getBoundingClientRect();
-            const isTop = e.clientY < rect.top + rect.height / 2;
-            targetCard.classList.toggle('drag-over-top', isTop);
-            targetCard.classList.toggle('drag-over-bottom', !isTop);
-          }
-        }
-      }
-    }, { passive: false });
-
-    function finishTouchDrag(e) {
-      if (!touchCard) return;
-
-      if (isTouchDragging && ghostEl) {
-        ghostEl.style.display = 'none';
-        const elUnder = document.elementFromPoint(e.clientX, e.clientY);
-        if (ghostEl.parentNode) ghostEl.parentNode.removeChild(ghostEl);
-        ghostEl = null;
-
-        if (elUnder) {
-          const targetCard = elUnder.closest('.log-card');
-          if (targetCard && targetCard !== touchCard) {
-            const rect = targetCard.getBoundingClientRect();
-            const insertBefore = e.clientY < rect.top + rect.height / 2;
-            const targetGroup = targetCard.closest('.log-day-group');
-            const targetDate = targetGroup ? targetGroup.dataset.date : null;
-            reorderLogs(touchSourceId, targetCard.dataset.id, insertBefore, targetDate);
-          } else {
-            const targetGroup = elUnder.closest('.log-day-group');
-            if (targetGroup) {
-              const targetDate = targetGroup.dataset.date;
-              moveLogToDate(touchSourceId, targetDate);
-            }
-          }
-        }
-      }
-
-      if (touchCard) {
-        touchCard.classList.remove('is-dragging');
-        touchCard = null;
-      }
-      touchSourceId = null;
-      isTouchDragging = false;
-      $$('.drag-over-top, .drag-over-bottom, .drag-over-group').forEach(el => {
-        el.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-over-group');
-      });
-    }
-
-    window.addEventListener('pointerup', finishTouchDrag);
-    window.addEventListener('pointercancel', finishTouchDrag);
   }
 
   /* ── INPUT & MODAL LISTENERS ── */
@@ -979,8 +1032,7 @@
     loadState();
     renderLogs();
     initFeedInteractions();
-    initDesktopDrag();
-    initTouchDrag();
+    initDragAndDrop();
     initInputAndEvents();
   }
 

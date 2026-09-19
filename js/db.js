@@ -484,7 +484,14 @@ function mergeLogsState(local, remote) {
     mergedLogs.push(log);
   }
 
-  mergedLogs.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+  mergedLogs.sort((a, b) => {
+    if (typeof a.order === 'number' && typeof b.order === 'number') {
+      return a.order - b.order;
+    }
+    if (typeof a.order === 'number') return -1;
+    if (typeof b.order === 'number') return 1;
+    return (b.createdAt || 0) - (a.createdAt || 0);
+  });
 
   const mergedDeletedArray = Array.from(allDeletedMap.entries()).map(([id, deletedAt]) => ({ id, deletedAt }));
 
